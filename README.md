@@ -1,5 +1,9 @@
 # Wrapper around gcloud CLI to deploy rancher.
 =====
+Prerequisites:
+Google Cloud SDK - [SDK](https://cloud.google.com/sdk/)
+
+=========
 ```
 ./gce-10acre-ranch -h
 gce-10acre-ranch Usage:
