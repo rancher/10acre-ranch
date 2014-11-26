@@ -14,17 +14,67 @@ print_help()
 cat >&2 <<EOF
 gce-10acre-ranch Usage:
     gce-10acre-ranch [opts] 
+    -b - Build a new cluster
+    -c - Cluster name[Required]
     -d - DELETE ALL NODES
     -i - Show the IP address of the master
     -h - Print this message
-    -l - list nodes
-    -n - number of nodes 
+    -l - List nodes
+    -n - Number of nodes 
+    -o - OS image
 EOF
 }
 
+while getopts ":bc:dhiln:" opt;do
+    case $opt in
+    b)
+        BUILD_CLUSTER_FLAG="true"
+        ;;
+    c)
+        # Add 10acre so that you can't list/delete lots of hosts easily.
+        CLUSTER_NAME="${OPTARG}-10acre"
+        MASTER_NAME="${CLUSTER_NAME}-master-0"
+        ;;
+    d)
+        DELETE_NODES_FLAG="true"
+        ;;
+    h)
+        print_help
+        exit 1
+        ;;
+    i)
+        MASTER_IP_FLAG="true"
+        ;;
+    l)
+        LIST_NODES_FLAG="true"
+        ;;
+    n)
+        INSTANCE_COUNT=$OPTARG
+        ;;
+    \?)
+        echo "Invalid arguemnts" >&2
+        print_help
+        exit 1
+        ;;
+    :)
+        echo "Option -${OPTARG} requires arguement." >&2
+        print_help
+        exit 1
+        ;;
+    esac
+done
+shift $((OPTIND-1))
+
+validate_vars()
+{
+    if [ -z ${CLUSTER_NAME+x} ];then { echo "Need to specify cluster name" >&2; print_help; exit 1; } fi
+    if [ -z ${INSTANCE_COUNT+x} ] && [ "${BUILD_CLUSTER_FLAG}" == "true" ]; then { echo "Please specify number of nodes with -n" >&2; print_help; exit 1; } fi
+}
+validate_vars
+
 list_nodes()
 {
-    gcloud compute instances list --zone us-central1-f --regex "$(whoami)-rancher-dev.*"
+    gcloud compute instances list --zone us-central1-f --regex "${CLUSTER_NAME}.*"
 }
 
 delete_nodes()
@@ -37,46 +87,12 @@ delete_nodes()
 
 get_master_ip()
 {
-    IP=$(gcloud compute instances describe "$(whoami)-rancher-dev-master-0" --zone us-central1-f|grep natIP |cut -d':' -f2)
+    IP=$(gcloud compute instances describe "${MASTER_NAME}" --zone us-central1-f|grep natIP |cut -d':' -f2)
     echo $IP
 }
 
 
-while getopts ":dhiln:" opt;do
-    case $opt in
-    d)
-        delete_nodes
-        exit 0
-        ;;
-    h)
-        print_help
-        exit 1
-        ;;
-    i)
-        get_master_ip
-        exit 0
-        ;;
-    l)
-        list_nodes
-        exit 0
-        ;;
-    n)
-        shift 1
-        INSTANCES="";for i in $(seq 1 $1);do INSTANCES="$(whoami)-rancher-dev-${i} ${INSTANCES}";done
-        ;;
-    \?)
-        echo "Invalid arguemnts"
-        print_help
-        exit 1
-        ;;
-    :)
-        echo "Option -${OPTARG} requires arguement." >&2
-        print_help
-        exit 1
-        ;;
-    esac
-    shift 1
-done
+if [ "${LIST_NODES_FLAG}" == "true" ];then { list_nodes "$CLUSTER_NAME"; exit 0; } fi
 
 gcloud_create()
 {
@@ -90,7 +106,8 @@ gcloud_create()
         --image "https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/ubuntu-1404-trusty-v20141031a"
 }
 
-generate_build_script()
+
+generate_build_script() # signature: role container
 {
     case $1 in
         master)
@@ -129,20 +146,28 @@ EOF
 
 build_master()
 {
-    MASTER_NAME="$(whoami)-rancher-dev-master-0"
     generate_build_script "master"
     gcloud_create "${MASTER_NAME}" "/tmp/10acre-master-build.sh"
 }
 
 build_compute()
 {
-    generate_build_script "worker"
+    INSTANCES="";for i in $(seq 1 ${INSTANCE_COUNT});do INSTANCES="${CLUSTER_NAME}-${i} ${INSTANCES}";done
+    generate_build_script "worker" 
     gcloud_create "${INSTANCES}" "/tmp/10acre-worker-build.sh"
 }
 
-main()
+build_cluster()
 {
     build_master
     build_compute
+}
+
+main() 
+{
+    if [ "${LIST_NODES_FLAG}" == "true" ];then { list_nodes; exit 0; } fi
+    if [ "${MASTER_IP_FLAG}" == "true" ]; then { get_master_ip; exit 0; } fi
+    if [ "${DELETE_NODES_FLAG}" == "true" ];then { delete_nodes; exit 0; } fi
+    if [ "${BUILD_CLUSTER_FLAG}" == "true" ];then { build_cluster; exit 0;} fi
 }
 main
