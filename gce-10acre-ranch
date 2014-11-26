@@ -14,6 +14,8 @@ print_help()
 cat >&2 <<EOF
 gce-10acre-ranch Usage:
     gce-10acre-ranch [opts] 
+    -a - Agent Container:
+            needs full container repo/name[:tag]
     -b - Build a new cluster
     -c - Cluster name[Required]
     -d - DELETE ALL NODES
@@ -21,12 +23,17 @@ gce-10acre-ranch Usage:
     -h - Print this message
     -l - List nodes
     -n - Number of nodes 
+    -s - Server Container:
+            needs full container repo/name[:tag] 
     -o - OS image
 EOF
 }
 
-while getopts ":bc:dhiln:" opt;do
+while getopts ":a:bc:dhiln:s:" opt;do
     case $opt in
+    a)
+        AGENT_CONTAINER="${OPTARG}"
+        ;;
     b)
         BUILD_CLUSTER_FLAG="true"
         ;;
@@ -50,6 +57,9 @@ while getopts ":bc:dhiln:" opt;do
         ;;
     n)
         INSTANCE_COUNT=$OPTARG
+        ;;
+    s)
+        SERVER_CONTAINER="${OPTARG}"
         ;;
     \?)
         echo "Invalid arguemnts" >&2
@@ -111,23 +121,17 @@ generate_build_script() # signature: role container
 {
     case $1 in
         master)
-            if [ -z ${2+x} ];then 
-                container="rancher/server"
-            else
-                container=$2
-            fi
-            DOCKER_CMD="docker run -d -p 8080:8080 ${container}"
+            default_container="rancher/server"
+
+            DOCKER_OPTS="run -d -p 8080:8080"
             BUILD_FILE="/tmp/10acre-master-build.sh"
             ;;
         worker)
-            if [ -z ${2+x} ];then 
-                container="rancher/agent"
-            else
-                container=$2
-            fi
+            default_container="rancher/agent"
 
             IP=$(get_master_ip)
-            DOCKER_CMD="docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock ${container} http://${IP}:8080"
+            DOCKER_OPTS="run --rm -it -v /var/run/docker.sock:/var/run/docker.sock"
+            DOCKER_CMD="http://${IP}:8080"
             BUILD_FILE="/tmp/10acre-worker-build.sh"
             ;;
         *)
@@ -135,25 +139,32 @@ generate_build_script() # signature: role container
             exit 1
             ;;
     esac
+
+    if [ -z ${2} ];then
+        container=${default_container}
+    else
+        container="${2}"
+    fi
+
 cat > ${BUILD_FILE} << EOF
 #!/bin/bash
 
 curl -sSL https://get.docker.com/| sh
 sleep 5
-${DOCKER_CMD}
+docker ${DOCKER_OPTS} ${container} $DOCKER_CMD
 EOF
 }
 
 build_master()
 {
-    generate_build_script "master"
+    generate_build_script "master" "${SERVER_CONTAINER}"
     gcloud_create "${MASTER_NAME}" "/tmp/10acre-master-build.sh"
 }
 
 build_compute()
 {
     INSTANCES="";for i in $(seq 1 ${INSTANCE_COUNT});do INSTANCES="${CLUSTER_NAME}-${i} ${INSTANCES}";done
-    generate_build_script "worker" 
+    generate_build_script "worker" "${AGENT_CONTAINER}"
     gcloud_create "${INSTANCES}" "/tmp/10acre-worker-build.sh"
 }
 
