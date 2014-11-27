@@ -29,10 +29,15 @@ gce-10acre-ranch Usage:
     -s - Server Container:
             needs full container repo/name[:tag] 
     -o - OS image
+        centos-7
+        coreos-alpha
+        coreos-beta
+        coreos-stable
+        ubuntu
 EOF
 }
 
-while getopts ":a:bc:dhiln:s:" opt;do
+while getopts ":a:bc:dhiln:o:s:" opt;do
     case $opt in
     a)
         AGENT_CONTAINER="${OPTARG}"
@@ -59,7 +64,10 @@ while getopts ":a:bc:dhiln:s:" opt;do
         LIST_NODES_FLAG="true"
         ;;
     n)
-        INSTANCE_COUNT=$OPTARG
+        INSTANCE_COUNT=${OPTARG}
+        ;;
+    o)
+        OS_FAMILY=${OPTARG}
         ;;
     s)
         SERVER_CONTAINER="${OPTARG}"
@@ -111,6 +119,35 @@ get_master_ip()
     echo $IP
 }
 
+get_os_image()
+{
+    # Has to be a better more dynamic way...that also isn't slow.
+    case $OS_FAMILY in
+        "ubuntu")
+            image="https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/ubuntu-1404-trusty-v20141031a"
+            ;;
+        "coreos-alpha")
+            image="https://www.googleapis.com/compute/v1/projects/coreos-cloud/global/images/coreos-alpha-509-1-0-v20141124"
+            ;;
+        "coreos-beta")
+            image="https://www.googleapis.com/compute/v1/projects/coreos-cloud/global/images/coreos-beta-494-1-0-v20141124"
+            ;;
+        "coreos-stable")
+            image="https://www.googleapis.com/compute/v1/projects/coreos-cloud/global/images/coreos-stable-444-5-0-v20141016"
+            ;;
+        "centos-7")
+            image="https://www.googleapis.com/compute/v1/projects/centos-cloud/global/images/centos-7-v20141108"
+            ;;
+        *)
+            echo "Using Ubuntu 14.04"
+            image="https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/ubuntu-1404-trusty-v20141031a"
+            ;;
+    esac
+
+    echo "${image}"
+
+}
+
 gcloud_create()
 {
     gcloud compute instances create ${1} \
@@ -120,7 +157,7 @@ gcloud_create()
         --maintenance-policy "MIGRATE" \
         --scopes "https://www.googleapis.com/auth/devstorage.read_only" \
         --tags "alt-http-server" \
-        --image "https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/ubuntu-1404-trusty-v20141031a"
+        --image $(get_os_image)
 }
 
 
@@ -164,7 +201,7 @@ generate_build_script() # signature: role container
 
 curl -sSL https://get.docker.com/| sh
 sleep 5
-docker ${docker_opts} ${container} $docker_cmd
+docker ${docker_opts} ${container} ${docker_cmd}
 EOF
 }
 

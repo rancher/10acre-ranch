@@ -19,6 +19,12 @@ gce-10acre-ranch Usage:
     -n - Number of nodes
     -s - Server Container:
             needs full container repo/name[:tag]
+    -o - OS Family
+    	centos-7
+        coreos-alpha
+        coreos-beta
+        coreos-stable
+        ubuntu
 ```
 
 To deploy a cluster:
@@ -31,12 +37,15 @@ Currently all nodes will be deployed with Ubuntu 14.04. The naming convention is
 <clustername>-10acre-[1:N]
 
 For more customizations/testing capabilities you can sepecify the Docker images for server and agents:
+
 ```
-# Server
+Server
 ./gce-10acre-ranch -c <clustername> -b -n <number of nodes> -s rancher/server:development
-# Agent
+
+Agent
 ./gce-10acre-ranch -c <clustername> -b -n <number of nodes> -a cloudnautique/agent:development
-# Or both
+
+Or both
 ./gce-10acre-ranch -c <clustername> -b -n <number of nodes> -a cloudnautique/agent:development -s ibuildthecloud/dev-server
 ```
 The Docker images must be real and accessible to Docker.
