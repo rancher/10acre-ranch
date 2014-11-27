@@ -2,16 +2,19 @@
 
 set -e
 
-if [ $(whoami) == "root" ];then
-    echo "Do not run as root!" >&2
+if [ $(whoami) == "root" ]; then
+    echo "Do not run as root!" 1>&2
     exit 1
 fi
 
-gcloud -v 2>&1 > /dev/null || { echo "gcloud command not found." >&2 ;exit 1; }
+gcloud -v >/dev/null 2>&1 || {
+    echo "gcloud command not found." 1>&2
+    exit 1
+}
 
 print_help()
 {
-cat >&2 <<EOF
+    cat 1>&2 <<EOF
 gce-10acre-ranch Usage:
     gce-10acre-ranch [opts] 
     -a - Agent Container:
@@ -77,10 +80,17 @@ shift $((OPTIND-1))
 
 validate_vars()
 {
-    if [ -z ${CLUSTER_NAME+x} ];then { echo "Need to specify cluster name" >&2; print_help; exit 1; } fi
-    if [ -z ${INSTANCE_COUNT+x} ] && [ "${BUILD_CLUSTER_FLAG}" == "true" ]; then { echo "Please specify number of nodes with -n" >&2; print_help; exit 1; } fi
+    if [ -z ${CLUSTER_NAME} ]; then
+        echo "Need to specify cluster name" >&2
+        print_help
+        exit 1
+    fi
+    if [[ -z ${INSTANCE_COUNT} && "${BUILD_CLUSTER_FLAG}" == "true" ]]; then
+        echo "Please specify number of nodes with -n" >&2
+        print_help
+        exit 1
+    fi
 }
-validate_vars
 
 list_nodes()
 {
@@ -89,7 +99,7 @@ list_nodes()
 
 delete_nodes()
 {
-    NODES=$(list_nodes|grep -v ^NAME|cut -d' ' -f1)
+    NODES=$(list_nodes | grep -v ^NAME | cut -d' ' -f1)
 
     # This will prompt the user to confirm.
     gcloud compute instances delete --zone us-central1-f $NODES
@@ -97,12 +107,9 @@ delete_nodes()
 
 get_master_ip()
 {
-    IP=$(gcloud compute instances describe "${MASTER_NAME}" --zone us-central1-f|grep natIP |cut -d':' -f2)
+    IP=$(gcloud compute instances describe "${MASTER_NAME}" --zone us-central1-f | grep natIP | cut -d':' -f2)
     echo $IP
 }
-
-
-if [ "${LIST_NODES_FLAG}" == "true" ];then { list_nodes "$CLUSTER_NAME"; exit 0; } fi
 
 gcloud_create()
 {
@@ -119,20 +126,26 @@ gcloud_create()
 
 generate_build_script() # signature: role container
 {
+    local container
+    local default_container
+    local build_file
+    local docker_opts
+    local docker_cmd
+
     case $1 in
         master)
             default_container="rancher/server"
 
-            DOCKER_OPTS="run -d -p 8080:8080"
-            BUILD_FILE="/tmp/10acre-master-build.sh"
+            docker_opts="run -d -p 8080:8080"
+            build_file="/tmp/10acre-master-build.sh"
             ;;
         worker)
             default_container="rancher/agent"
 
             IP=$(get_master_ip)
-            DOCKER_OPTS="run --rm -it -v /var/run/docker.sock:/var/run/docker.sock"
-            DOCKER_CMD="http://${IP}:8080"
-            BUILD_FILE="/tmp/10acre-worker-build.sh"
+            docker_opts="run --rm -it -v /var/run/docker.sock:/var/run/docker.sock"
+            docker_cmd="http://${IP}:8080"
+            build_file="/tmp/10acre-worker-build.sh"
             ;;
         *)
             echo "Can not generate build script"
@@ -140,18 +153,18 @@ generate_build_script() # signature: role container
             ;;
     esac
 
-    if [ -z ${2} ];then
+    if [ -z ${2} ]; then
         container=${default_container}
     else
         container="${2}"
     fi
 
-cat > ${BUILD_FILE} << EOF
+    cat > ${build_file} << EOF
 #!/bin/bash
 
 curl -sSL https://get.docker.com/| sh
 sleep 5
-docker ${DOCKER_OPTS} ${container} $DOCKER_CMD
+docker ${docker_opts} ${container} $docker_cmd
 EOF
 }
 
@@ -163,9 +176,14 @@ build_master()
 
 build_compute()
 {
-    INSTANCES="";for i in $(seq 1 ${INSTANCE_COUNT});do INSTANCES="${CLUSTER_NAME}-${i} ${INSTANCES}";done
+    local instances
+    
+    for i in $(seq 1 ${INSTANCE_COUNT}); do
+        instances="${CLUSTER_NAME}-${i} ${instances}"
+    done
+
     generate_build_script "worker" "${AGENT_CONTAINER}"
-    gcloud_create "${INSTANCES}" "/tmp/10acre-worker-build.sh"
+    gcloud_create "${instances}" "/tmp/10acre-worker-build.sh"
 }
 
 build_cluster()
@@ -176,9 +194,18 @@ build_cluster()
 
 main() 
 {
-    if [ "${LIST_NODES_FLAG}" == "true" ];then { list_nodes; exit 0; } fi
-    if [ "${MASTER_IP_FLAG}" == "true" ]; then { get_master_ip; exit 0; } fi
-    if [ "${DELETE_NODES_FLAG}" == "true" ];then { delete_nodes; exit 0; } fi
-    if [ "${BUILD_CLUSTER_FLAG}" == "true" ];then { build_cluster; exit 0;} fi
+    validate_vars
+    if [ "${LIST_NODES_FLAG}" = "true" ]; then
+        list_nodes "$CLUSTER_NAME"
+    elif [ "${LIST_NODES_FLAG}" = "true" ]; then
+        list_nodes
+    elif [ "${MASTER_IP_FLAG}" = "true" ]; then
+        get_master_ip
+    elif [ "${DELETE_NODES_FLAG}" = "true" ]; then 
+        delete_nodes
+    elif [ "${BUILD_CLUSTER_FLAG}" = "true" ]; then
+        build_cluster
+    fi
 }
+
 main
