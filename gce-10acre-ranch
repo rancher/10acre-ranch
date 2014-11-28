@@ -121,6 +121,8 @@ get_master_ip()
 
 get_os_image()
 {
+    local image
+
     # Has to be a better more dynamic way...that also isn't slow.
     case $OS_FAMILY in
         "ubuntu")
@@ -199,7 +201,7 @@ generate_build_script() # signature: role container
     cat > ${build_file} << EOF
 #!/bin/bash
 
-curl -sSL https://get.docker.com/| sh
+curl -sSL --retry 5 --retry-delay 10 https://get.docker.com/| sh
 sleep 5
 docker ${docker_opts} ${container} ${docker_cmd}
 EOF
