@@ -11,11 +11,11 @@ gce-10acre-ranch Usage:
     -a - Agent Container:
             needs full container repo/name[:tag]
     -b - Build a new cluster
-    -c - Cluster name[Required]
+    -c - Cluster name
     -d - DELETE ALL NODES
     -i - Show the IP address of the master
     -h - Print this message
-    -l - List nodes
+    -l - List nodes or clusters if no -c
     -n - Number of nodes
     -s - Server Container:
             needs full container repo/name[:tag]
