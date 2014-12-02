@@ -7,6 +7,8 @@ if [ $(whoami) == "root" ]; then
     exit 1
 fi
 
+GCE_PROJECT="rancher-dev"
+
 gcloud -v >/dev/null 2>&1 || {
     echo "gcloud command not found." 1>&2
     exit 1
@@ -102,7 +104,7 @@ validate_vars()
 
 list_nodes()
 {
-    gcloud compute instances list --zone us-central1-f --regex "${CLUSTER_NAME}.*"
+    gcloud compute instances list --project ${GCE_PROJECT} --zone us-central1-f --regex "${CLUSTER_NAME}.*"
 }
 
 delete_nodes()
@@ -110,12 +112,12 @@ delete_nodes()
     NODES=$(list_nodes | grep -v ^NAME | cut -d' ' -f1)
 
     # This will prompt the user to confirm.
-    gcloud compute instances delete --zone us-central1-f $NODES
+    gcloud compute instances delete --project ${GCE_PROJECT} --zone us-central1-f $NODES
 }
 
 get_master_ip()
 {
-    IP=$(gcloud compute instances describe "${MASTER_NAME}" --zone us-central1-f | grep natIP | cut -d':' -f2)
+    IP=$(gcloud compute instances describe "${MASTER_NAME}" --project ${GCE_PROJECT} --zone us-central1-f | grep natIP | cut -d':' -f2)
     echo $IP
 }
 
@@ -154,7 +156,8 @@ gcloud_create()
 {
     gcloud compute instances create ${1} \
         --zone "us-central1-f" --machine-type "n1-standard-1" \
-        --network "development" \
+        --network "default" \
+        --project "${GCE_PROJECT}" \
         --metadata-from-file startup-script=${2} \
         --maintenance-policy "MIGRATE" \
         --scopes "https://www.googleapis.com/auth/devstorage.read_only" \
