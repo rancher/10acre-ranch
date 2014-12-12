@@ -160,7 +160,7 @@ gcloud_create()
         --metadata-from-file startup-script=${2} \
         --maintenance-policy "MIGRATE" \
         --scopes "https://www.googleapis.com/auth/devstorage.read_only" \
-        --tags "alt-http-server" \
+        --tags ${3} \
         --image $(get_os_image)
 }
 
@@ -212,7 +212,7 @@ EOF
 build_master()
 {
     generate_build_script "master" "${SERVER_CONTAINER}"
-    gcloud_create "${MASTER_NAME}" "/tmp/10acre-master-build.sh"
+    gcloud_create "${MASTER_NAME}" "/tmp/10acre-master-build.sh" "alt-http-server"
 }
 
 build_compute()
@@ -224,7 +224,7 @@ build_compute()
     done
 
     generate_build_script "worker" "${AGENT_CONTAINER}"
-    gcloud_create "${instances}" "/tmp/10acre-worker-build.sh"
+    gcloud_create "${instances}" "/tmp/10acre-worker-build.sh" "alt-http-server open-compute-node"
 }
 
 build_cluster()
@@ -237,7 +237,7 @@ main()
 {
     validate_vars
     if [[ "${LIST_NODES_FLAG}" = "true" && -z "$CLUSTER_NAME" ]]; then
-        list_nodes | grep -- '-master-' | cut -f1 -d'-' | sort -u
+        list_nodes | grep -- '-master-' | sed -e 's/^\(.*\)\(-10acre-master.*\)$/\1/' | sort -u
     elif [ "${LIST_NODES_FLAG}" = "true" ]; then
         list_nodes
     elif [ "${MASTER_IP_FLAG}" = "true" ]; then
