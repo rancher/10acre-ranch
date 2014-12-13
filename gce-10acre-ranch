@@ -36,10 +36,11 @@ gce-10acre-ranch Usage:
         coreos-beta
         coreos-stable
         ubuntu
+    -q - Do not prompt user
 EOF
 }
 
-while getopts ":a:bc:dhiln:o:s:" opt;do
+while getopts ":a:bc:dhiln:o:s:q" opt;do
     case $opt in
     a)
         AGENT_CONTAINER="${OPTARG}"
@@ -48,7 +49,7 @@ while getopts ":a:bc:dhiln:o:s:" opt;do
         BUILD_CLUSTER_FLAG="true"
         ;;
     c)
-        # Add 10acre so that you can't list/delete lots of hosts easily.
+        # Add 10acre so that you can't accidentally list/delete lots of hosts easily.
         CLUSTER_NAME="${OPTARG}-10acre"
         MASTER_NAME="${CLUSTER_NAME}-master-0"
         ;;
@@ -73,6 +74,9 @@ while getopts ":a:bc:dhiln:o:s:" opt;do
         ;;
     s)
         SERVER_CONTAINER="${OPTARG}"
+        ;;
+    q)
+        QUIET="true"
         ;;
     \?)
         echo "Invalid arguemnts" >&2
@@ -109,10 +113,19 @@ list_nodes()
 
 delete_nodes()
 {
-    NODES=$(list_nodes | grep -v ^NAME | cut -d' ' -f1)
+    local opts
+    local nodes
+
+    nodes=$(list_nodes | grep -v ^NAME | cut -d' ' -f1)
 
     # This will prompt the user to confirm.
-    gcloud compute instances delete --project ${GCE_PROJECT} --zone us-central1-f $NODES
+    if [ ${QUIET} ]; then
+        opts="--quiet"
+    else
+        opts=""
+    fi
+
+    gcloud compute instances delete ${opts} --project ${GCE_PROJECT} --zone us-central1-f ${nodes}
 }
 
 get_master_ip()
