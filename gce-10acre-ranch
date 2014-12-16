@@ -166,6 +166,9 @@ get_os_image()
 
 gcloud_create()
 {
+    # 1 - instance name
+    # 2 - startup script path/filename
+    # 3 - GCE tags
     gcloud compute instances create ${1} \
         --zone "us-central1-f" --machine-type "n1-standard-1" \
         --network "default" \
