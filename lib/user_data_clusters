@@ -1,0 +1,40 @@
+set -e
+
+user_data_clusters()
+{
+    local username=$1
+    local sshKey=$2
+
+    local build_file=$3
+    local container=$4
+    declare -a docker_opts=("${!5}")
+    local docker_command=$6
+
+    if [ -z "${docker_command}" ]; then
+        declare -a docker_line=('"docker"', ${docker_opts[@]}, "\"${container}\"")
+    else
+        declare -a docker_line=('"docker"', ${docker_opts[@]}, "\"${container}\"", "\"${docker_command}\"")
+    fi
+
+    cat > ${build_file} << EOF
+#cloud-config
+users:
+  - name: ${username}
+    groups:
+      - sudo
+    shell: /bin/bash
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    ssh-authorized-keys:
+      - ${sshKey}
+runcmd:
+  - [ "sleep", "10" ]
+  - [ "modprobe", "arptable_filter" ]
+  - [ "curl", "-o", "/tmp/docker_install.sh", "-sSL", "https://get.docker.com" ]
+  - [ "/bin/sh", "/tmp/docker_install.sh" ]
+  - [ "service", "docker", "start" ]
+  - [ "sleep", "10" ]
+  - [ "usermod", "-aG", "docker", "${username}" ]
+  - [ ${docker_line[@]} ]
+EOF
+
+}

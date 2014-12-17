@@ -9,6 +9,9 @@ fi
 
 GCE_PROJECT="rancher-dev"
 
+dir=$(dirname $0)
+source ${dir}/lib/user_data_clusters
+
 gcloud -v >/dev/null 2>&1 || {
     echo "gcloud command not found." 1>&2
     exit 1
@@ -31,16 +34,18 @@ gce-10acre-ranch Usage:
     -s - Server Container:
             needs full container repo/name[:tag] 
     -o - OS image
-        centos-7
-        coreos-alpha
-        coreos-beta
-        coreos-stable
-        ubuntu
+           centos-7
+           coreos-alpha
+           coreos-beta
+           coreos-stable
+           fedora-21
+           ubuntu
+    -p - privileged agent (needed for fedora)
     -q - Do not prompt user
 EOF
 }
 
-while getopts ":a:bc:dhiln:o:s:q" opt;do
+while getopts ":a:bc:dhiln:o:ps:q" opt;do
     case $opt in
     a)
         AGENT_CONTAINER="${OPTARG}"
@@ -71,6 +76,9 @@ while getopts ":a:bc:dhiln:o:s:q" opt;do
         ;;
     o)
         OS_FAMILY=${OPTARG}
+        ;;
+    p)
+        PRIVILEGED_AGENT="true"
         ;;
     s)
         SERVER_CONTAINER="${OPTARG}"
@@ -141,7 +149,7 @@ get_os_image()
     # Has to be a better more dynamic way...that also isn't slow.
     case $OS_FAMILY in
         "ubuntu")
-            image="https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/ubuntu-1404-trusty-v20141031a"
+            image="ubuntu-14-04"
             ;;
         "coreos-alpha")
             image="https://www.googleapis.com/compute/v1/projects/coreos-cloud/global/images/coreos-alpha-509-1-0-v20141124"
@@ -150,13 +158,16 @@ get_os_image()
             image="https://www.googleapis.com/compute/v1/projects/coreos-cloud/global/images/coreos-beta-494-1-0-v20141124"
             ;;
         "coreos-stable")
-            image="https://www.googleapis.com/compute/v1/projects/coreos-cloud/global/images/coreos-stable-444-5-0-v20141016"
+            image="coreos"
             ;;
         "centos-7")
-            image="https://www.googleapis.com/compute/v1/projects/centos-cloud/global/images/centos-7-v20141108"
+            image="centos-7"
+            ;;
+        "fedora-21")
+            image="fedora-cloud-base-21-20141215"
             ;;
         *)
-            image="https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/ubuntu-1404-trusty-v20141031a"
+            image="ubuntu-14-04"
             ;;
     esac
 
@@ -164,16 +175,35 @@ get_os_image()
 
 }
 
+get_user_data_flag()
+{
+    case $OS_FAMILY in
+        "fedora-21")
+            echo "true"
+            ;;
+        *)
+            echo "false"
+            ;;
+    esac
+}
+
 gcloud_create()
 {
     # 1 - instance name
     # 2 - startup script path/filename
     # 3 - GCE tags
+
+    local metadata_key=startup-script
+
+    if [ "$(get_user_data_flag)" = "true" ]; then
+        metadata_key=user-data
+    fi
+
     gcloud compute instances create ${1} \
         --zone "us-central1-f" --machine-type "n1-standard-1" \
         --network "default" \
         --project "${GCE_PROJECT}" \
-        --metadata-from-file startup-script=${2} \
+        --metadata-from-file ${metadata_key}=${2} \
         --maintenance-policy "MIGRATE" \
         --scopes "https://www.googleapis.com/auth/devstorage.read_only" \
         --tags ${3} \
@@ -193,14 +223,20 @@ generate_build_script() # signature: role container
         master)
             default_container="rancher/server"
 
-            docker_opts="run -d -p 8080:8080"
+            docker_opts=('"run"', '"-d"', '"-p"', '"8080:8080"');
             build_file="/tmp/10acre-master-build.sh"
+            docker_cmd=
             ;;
         worker)
             default_container="rancher/agent"
 
             IP=$(get_master_ip)
-            docker_opts="run --rm -it -v /var/run/docker.sock:/var/run/docker.sock"
+            docker_opts=('"run"', '"-d"', '"-v"', '"/var/run/docker.sock:/var/run/docker.sock"');
+
+            if [[ "${PRIVILEGED_AGENT}" = "true" ]]; then
+                docker_opts+=(, '"--privileged"')
+            fi
+
             docker_cmd="http://${IP}:8080"
             build_file="/tmp/10acre-worker-build.sh"
             ;;
@@ -216,13 +252,18 @@ generate_build_script() # signature: role container
         container="${2}"
     fi
 
-    cat > ${build_file} << EOF
+    if [ "$(get_user_data_flag)" = "true" ]; then
+        user_data_clusters $(id -un) "$(cat ~/.ssh/id_rsa.pub)" ${build_file} "${container}" docker_opts[@] "${docker_cmd}"
+    else
+            cat > ${build_file} << EOF
 #!/bin/bash
 
 curl -sSL --retry 5 --retry-delay 10 https://get.docker.com/| sh
 sleep 5
-docker ${docker_opts} ${container} ${docker_cmd}
+docker $(echo ${docker_opts[@]}| sed -e 's/,//g'|sed -e 's/\"//g') ${container} ${docker_cmd}
 EOF
+    fi
+
 }
 
 build_master()
@@ -240,7 +281,7 @@ build_compute()
     done
 
     generate_build_script "worker" "${AGENT_CONTAINER}"
-    gcloud_create "${instances}" "/tmp/10acre-worker-build.sh" "alt-http-server open-compute-node"
+    gcloud_create "${instances}" "/tmp/10acre-worker-build.sh" "alt-http-server open-compute-nodes"
 }
 
 build_cluster()
