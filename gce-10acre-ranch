@@ -164,7 +164,7 @@ get_os_image()
             image="centos-7"
             ;;
         "fedora-21")
-            image="fedora-cloud-base-21-20141215"
+            image="fedora-cloud-base-21-20141217"
             ;;
         *)
             image="ubuntu-14-04"
