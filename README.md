@@ -24,7 +24,10 @@ gce-10acre-ranch Usage:
         coreos-alpha
         coreos-beta
         coreos-stable
+        fedora-21
         ubuntu
+    -p - privileged agent (needed for Fedora)
+    -q - Do not prompt user
 ```
 
 To deploy a cluster:
