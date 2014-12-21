@@ -116,7 +116,13 @@ validate_vars()
 
 list_nodes()
 {
-    gcloud compute instances list --project ${GCE_PROJECT} --zone us-central1-f --regex "${CLUSTER_NAME}.*"
+    local opts
+
+    if [ -n "${CLUSTER_NAME}" ]; then
+        opts="--regex \"${CLUSTER_NAME}.*\""
+    fi
+
+    gcloud compute instances list --project ${GCE_PROJECT} --zone us-central1-f ${opts}
 }
 
 delete_nodes()
@@ -296,7 +302,7 @@ main()
     if [[ "${LIST_NODES_FLAG}" = "true" && -z "$CLUSTER_NAME" ]]; then
         list_nodes | grep -- '-master-' | sed -e 's/^\(.*\)\(-10acre-master.*\)$/\1/' | sort -u
     elif [ "${LIST_NODES_FLAG}" = "true" ]; then
-        list_nodes
+        list_nodes 
     elif [ "${MASTER_IP_FLAG}" = "true" ]; then
         get_master_ip
     elif [ "${DELETE_NODES_FLAG}" = "true" ]; then 
