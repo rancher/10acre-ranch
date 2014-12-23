@@ -7,7 +7,7 @@ if [ $(whoami) == "root" ]; then
     exit 1
 fi
 
-GCE_PROJECT="rancher-dev"
+: ${GCE_PROJECT:="rancher-dev"}
 
 dir=$(dirname $0)
 source ${dir}/lib/user_data_clusters

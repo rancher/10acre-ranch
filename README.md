@@ -30,6 +30,8 @@ gce-10acre-ranch Usage:
     -q - Do not prompt user
 ```
 
+To set the GCE Project export the environment variable `GCE_PROJECT="<project>"`
+
 To deploy a cluster:
 
 ```
