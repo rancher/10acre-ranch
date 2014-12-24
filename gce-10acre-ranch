@@ -40,12 +40,15 @@ gce-10acre-ranch Usage:
            coreos-stable
            fedora-21
            ubuntu
-    -p - privileged agent (needed for fedora)
+    -p - privileged (needed for fedora)
+        - master
+        - slave
+        - all
     -q - Do not prompt user
 EOF
 }
 
-while getopts ":a:bc:dhiln:o:ps:q" opt;do
+while getopts ":a:bc:dhiln:o:p:s:q" opt;do
     case $opt in
     a)
         AGENT_CONTAINER="${OPTARG}"
@@ -78,7 +81,22 @@ while getopts ":a:bc:dhiln:o:ps:q" opt;do
         OS_FAMILY=${OPTARG}
         ;;
     p)
-        PRIVILEGED_AGENT="true"
+        case $OPTARG in
+            master)
+                PRIVILEGED_MASTER="true"
+                ;;
+            agent)
+                PRIVILEGED_AGENT="true"
+                ;;
+            all)
+                PRIVILEGED_MASTER="true"
+                PRIVILEGED_AGENT="true"
+                ;;
+            * )
+                print_help
+                exit 1
+                ;;
+            esac
         ;;
     s)
         SERVER_CONTAINER="${OPTARG}"
@@ -232,6 +250,11 @@ generate_build_script() # signature: role container
             docker_opts=('"run"', '"-d"', '"-p"', '"8080:8080"');
             build_file="/tmp/10acre-master-build.sh"
             docker_cmd=
+
+            if [[ "${PRIVILEGED_MASTER}" = "true" ]]; then
+                docker_opts+=(, '"--privileged"')
+            fi
+
             ;;
         worker)
             default_container="rancher/agent"
