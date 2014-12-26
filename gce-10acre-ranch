@@ -38,6 +38,7 @@ gce-10acre-ranch Usage:
            coreos-alpha
            coreos-beta
            coreos-stable
+           debian-7-backports
            fedora-21
            ubuntu
     -p - privileged (needed for fedora)
@@ -186,6 +187,9 @@ get_os_image()
             ;;
         "centos-7")
             image="centos-7"
+            ;;
+        "debian-7-backports")
+            image="debian-7-backports"
             ;;
         "fedora-21")
             image="fedora-cloud-base-21-20141217"
