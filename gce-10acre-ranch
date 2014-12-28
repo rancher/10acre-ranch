@@ -42,8 +42,8 @@ gce-10acre-ranch Usage:
            fedora-21
            ubuntu
     -p - privileged (needed for fedora)
-        - master
-        - slave
+        - server
+        - agent
         - all
     -q - Do not prompt user
 EOF
@@ -83,13 +83,13 @@ while getopts ":a:bc:dhiln:o:p:s:q" opt;do
         ;;
     p)
         case $OPTARG in
-            master)
+            "server")
                 PRIVILEGED_MASTER="true"
                 ;;
-            agent)
+            "agent")
                 PRIVILEGED_AGENT="true"
                 ;;
-            all)
+            "all")
                 PRIVILEGED_MASTER="true"
                 PRIVILEGED_AGENT="true"
                 ;;
