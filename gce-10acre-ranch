@@ -46,10 +46,11 @@ gce-10acre-ranch Usage:
         - agent
         - all
     -q - Do not prompt user
+    -r - Registration url
 EOF
 }
 
-while getopts ":a:bc:dhiln:o:p:s:q" opt;do
+while getopts ":a:bc:dhiln:o:p:qr:s:" opt;do
     case $opt in
     a)
         AGENT_CONTAINER="${OPTARG}"
@@ -99,11 +100,14 @@ while getopts ":a:bc:dhiln:o:p:s:q" opt;do
                 ;;
             esac
         ;;
-    s)
-        SERVER_CONTAINER="${OPTARG}"
+    r)
+        REGISTRATION_URL="${OPTARG}"
         ;;
     q)
         QUIET="true"
+        ;;
+    s)
+        SERVER_CONTAINER="${OPTARG}"
         ;;
     \?)
         echo "Invalid arguemnts" >&2
@@ -270,7 +274,7 @@ generate_build_script() # signature: role container
                 docker_opts+=(, '"--privileged"')
             fi
 
-            docker_cmd="http://${IP}:8080"
+            docker_cmd=${REGISTRATION_URL:="http://${IP}:8080"}
             build_file="/tmp/10acre-worker-build.sh"
             ;;
         *)
