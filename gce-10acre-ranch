@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -e 
 
 if [ $(whoami) == "root" ]; then
     echo "Do not run as root!" 1>&2
@@ -27,6 +27,7 @@ gce-10acre-ranch Usage:
     -b - Build a new cluster
     -c - Cluster name[Required]
     -d - DELETE ALL NODES
+    -e - External IP for master...(yes this is getting rediculous)
     -i - Show the IP address of the master
     -h - Print this message
     -l - List nodes or clusters if no -c is passed
@@ -50,7 +51,7 @@ gce-10acre-ranch Usage:
 EOF
 }
 
-while getopts ":a:bc:dhiln:o:p:qr:s:" opt;do
+while getopts ":a:bc:de:hiln:o:p:qr:s:" opt;do
     case $opt in
     a)
         AGENT_CONTAINER="${OPTARG}"
@@ -65,6 +66,9 @@ while getopts ":a:bc:dhiln:o:p:qr:s:" opt;do
         ;;
     d)
         DELETE_NODES_FLAG="true"
+        ;;
+    e)
+        EXTERNAL_IP=${OPTARG}
         ;;
     h)
         print_help
@@ -224,22 +228,30 @@ gcloud_create()
     # 1 - instance name
     # 2 - startup script path/filename
     # 3 - GCE tags
+    # 4 - Master IP Address
 
     local metadata_key=startup-script
+    local gcloud_args
 
     if [ "$(get_user_data_flag)" = "true" ]; then
         metadata_key=user-data
     fi
 
-    gcloud compute instances create ${1} \
-        --zone "us-central1-f" --machine-type "n1-standard-1" \
+    gcloud_args="--zone "us-central1-f" --machine-type "n1-standard-1" \
         --network "default" \
         --project "${GCE_PROJECT}" \
         --metadata-from-file ${metadata_key}=${2} \
         --maintenance-policy "MIGRATE" \
         --scopes "https://www.googleapis.com/auth/devstorage.read_only" \
         --tags ${3} \
-        --image $(get_os_image)
+        --image $(get_os_image) "
+
+    if [ ! -z ${4} ]; then
+        gcloud_args="${gcloud_args} --address ${4}"
+    fi
+
+    gcloud compute instances create ${1} \
+        $gcloud_args
 }
 
 
@@ -305,8 +317,8 @@ EOF
 
 build_master()
 {
-    generate_build_script "master" "${SERVER_CONTAINER}"
-    gcloud_create "${MASTER_NAME}" "/tmp/10acre-master-build.sh" "alt-http-server"
+    generate_build_script "master" "${SERVER_CONTAINER}" 
+    gcloud_create "${MASTER_NAME}" "/tmp/10acre-master-build.sh" "alt-http-server" ${EXTERNAL_IP}
 }
 
 build_compute()
