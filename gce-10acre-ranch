@@ -48,10 +48,11 @@ gce-10acre-ranch Usage:
         - all
     -q - Do not prompt user
     -r - Registration url
+    -w - Wait for a successful server ping
 EOF
 }
 
-while getopts ":a:bc:de:hiln:o:p:qr:s:" opt;do
+while getopts ":a:bc:de:hiln:o:p:qr:s:w" opt;do
     case $opt in
     a)
         AGENT_CONTAINER="${OPTARG}"
@@ -112,6 +113,9 @@ while getopts ":a:bc:de:hiln:o:p:qr:s:" opt;do
         ;;
     s)
         SERVER_CONTAINER="${OPTARG}"
+        ;;
+    w)
+        WAIT=true
         ;;
     \?)
         echo "Invalid arguemnts" >&2
@@ -336,6 +340,16 @@ build_compute()
 build_cluster()
 {
     build_master
+    if [ "$WAIT" = "true" ]; then
+        echo -n "Waiting for server to start "
+        while sleep 5; do
+            if [ "$(curl -s http://${IP}:8080/ping)" = "pong" ]; then
+                echo Success
+                break
+            fi
+            echo -n "."
+        done
+    fi
     build_compute
 }
 
