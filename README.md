@@ -1,7 +1,8 @@
-# Wrapper around gcloud CLI to deploy rancher.
+## Wrapper to deploy Rancher on Google Compute Engine
 =====
 Prerequisites:
-Google Cloud SDK - [SDK](https://cloud.google.com/sdk/)
+
+- Google Cloud SDK - [SDK](https://cloud.google.com/sdk/)
 
 =========
 ```
@@ -9,25 +10,31 @@ Google Cloud SDK - [SDK](https://cloud.google.com/sdk/)
 gce-10acre-ranch Usage:
     gce-10acre-ranch [opts]
     -a - Agent Container:
-            needs full container repo/name[:tag]
-    -b - Build a new cluster
+           needs full container repo/name[:tag]
     -c - Cluster name
     -d - DELETE ALL NODES
+    -e - External IP for master...(yes this is getting rediculous)
     -i - Show the IP address of the master
     -h - Print this message
     -l - List nodes or clusters if no -c
     -n - Number of nodes
     -s - Server Container:
-            needs full container repo/name[:tag]
+           needs full container repo/name[:tag]
     -o - OS Family
-    	centos-7
-        coreos-alpha
-        coreos-beta
-        coreos-stable
-        fedora-21
-        ubuntu
+    	   centos-6 (Servers only. Configuration is manual)
+           centos-7 (Servers only. Configuration is manual)
+           rhel-6 (Servers only.)
+           rhel-7 (Servers only.)
+           coreos-alpha
+           coreos-beta
+           coreos-stable
+           debian-7-backports
+           fedora-21
+           ubuntu
     -p - privileged agent (needed for Fedora)
     -q - Do not prompt user
+    -r - Registration url
+    -w - Wait for successful server ping.
 ```
 
 To set the GCE Project export the environment variable `GCE_PROJECT="<project>"`
@@ -35,7 +42,7 @@ To set the GCE Project export the environment variable `GCE_PROJECT="<project>"`
 To deploy a cluster:
 
 ```
-./gce-10acre-ranch -c <clustername> -b -n <number of nodes>
+./gce-10acre-ranch -c <clustername> -n <number of nodes>
 ```
 Currently all nodes will be deployed with Ubuntu 14.04. The naming convention is:
 <clustername>-10acre-master-0
@@ -45,13 +52,13 @@ For more customizations/testing capabilities you can sepecify the Docker images 
 
 ```
 Server
-./gce-10acre-ranch -c <clustername> -b -n <number of nodes> -s rancher/server:development
+./gce-10acre-ranch -c <clustername> -n <number of nodes> -s rancher/server:development
 
 Agent
-./gce-10acre-ranch -c <clustername> -b -n <number of nodes> -a cloudnautique/agent:development
+./gce-10acre-ranch -c <clustername> -n <number of nodes> -a cloudnautique/agent:development
 
 Or both
-./gce-10acre-ranch -c <clustername> -b -n <number of nodes> -a cloudnautique/agent:development -s ibuildthecloud/dev-server
+./gce-10acre-ranch -c <clustername> -n <number of nodes> -a cloudnautique/agent:development -s ibuildthecloud/dev-server
 ```
 The Docker images must be real and accessible to Docker.
 
@@ -66,14 +73,19 @@ Get the master IP:
 ```
 You can hit this IP over port 8080 to get to the UI
 
+List all Clusters:
+
+```
+./gce-10acre-ranch -l
+```
 List all the nodes:
 
 ```
 ./gce-10acre-ranch -c <cluster name> -l
 ```
 
-Destroy the cluster:
+Destroy the cluster(-q for quiet):
 
 ```
-./gce-10acre-ranch -c <cluster name> -d
+./gce-10acre-ranch -c <cluster name> -d (-q)
 ```

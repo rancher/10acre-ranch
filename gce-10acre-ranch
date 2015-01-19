@@ -24,7 +24,6 @@ gce-10acre-ranch Usage:
     gce-10acre-ranch [opts] 
     -a - Agent Container:
             needs full container repo/name[:tag]
-    -b - Build a new cluster
     -c - Cluster name[Required]
     -d - DELETE ALL NODES
     -e - External IP for master...(yes this is getting rediculous)
@@ -35,7 +34,10 @@ gce-10acre-ranch Usage:
     -s - Server Container:
             needs full container repo/name[:tag] 
     -o - OS image
-           centos-7
+           centos-6 (Servers only. Configuration is manual)
+           centos-7 (Servers only. Configuration is manual)
+           rhel-6 (Servers only.)
+           rhel-7 (Servers only.)
            coreos-alpha
            coreos-beta
            coreos-stable
@@ -58,7 +60,7 @@ while getopts ":a:bc:de:hiln:o:p:qr:s:w" opt;do
         AGENT_CONTAINER="${OPTARG}"
         ;;
     b)
-        BUILD_CLUSTER_FLAG="true"
+        echo "-b option deprecated. No longer needed"
         ;;
     c)
         # Add 10acre so that you can't accidentally list/delete lots of hosts easily.
@@ -131,20 +133,6 @@ while getopts ":a:bc:de:hiln:o:p:qr:s:w" opt;do
 done
 shift $((OPTIND-1))
 
-validate_vars()
-{
-    if [[ -z ${CLUSTER_NAME} && "${LIST_NODES_FLAG}" != "true" ]]; then
-        echo "Need to specify cluster name" >&2
-        print_help
-        exit 1
-    fi
-    if [[ -z ${INSTANCE_COUNT} && "${BUILD_CLUSTER_FLAG}" == "true" ]]; then
-        echo "Please specify number of nodes with -n" >&2
-        print_help
-        exit 1
-    fi
-}
-
 list_nodes()
 {
     local opts
@@ -197,8 +185,17 @@ get_os_image()
         "coreos-stable")
             image="coreos"
             ;;
+        "centos-6")
+            image="centos-6"
+            ;;
         "centos-7")
             image="centos-7"
+            ;;
+        "rhel-6")
+            image="rhel-6"
+            ;;
+        "rhel-7")
+            image="rhel-7"
             ;;
         "debian-7-backports")
             image="debian-7-backports"
@@ -356,17 +353,20 @@ build_cluster()
 
 main() 
 {
-    validate_vars
-    if [[ "${LIST_NODES_FLAG}" = "true" && -z "$CLUSTER_NAME" ]]; then
+    if [[ "${LIST_NODES_FLAG}" = "true" && -z "${CLUSTER_NAME}" ]]; then
         list_nodes | grep -- '-master-' | sed -e 's/^\(.*\)\(-10acre-master.*\)$/\1/' | sort -u
-    elif [ "${LIST_NODES_FLAG}" = "true" ]; then
+    elif [[ "${LIST_NODES_FLAG}" = "true" && "${CLUSTER_NAME}" ]]; then
         list_nodes 
     elif [ "${MASTER_IP_FLAG}" = "true" ]; then
         get_master_ip
-    elif [ "${DELETE_NODES_FLAG}" = "true" ]; then 
+    elif [[ "${DELETE_NODES_FLAG}" = "true" && -n "${CLUSTER_NAME}" ]]; then 
         delete_nodes
-    elif [ "${BUILD_CLUSTER_FLAG}" = "true" ]; then
+    elif [[ -n "${INSTANCE_COUNT}" && -n "${CLUSTER_NAME}" ]]; then
         build_cluster
+    else
+        echo "Unable to take action" 1>&2
+        print_help
+        exit 1
     fi
 }
 
