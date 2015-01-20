@@ -1,22 +1,30 @@
+#!/bin/bash
+
 set -e
 
-user_data_clusters()
-{
-    local username=$1
-    local sshKey=$2
+username=$1
+sshKey=$2
 
-    local build_file=$3
-    local container=$4
-    declare -a docker_opts=("${!5}")
-    local docker_command=$6
+build_file=$3
+container=$4
+docker_command=$5
 
-    if [ -z "${docker_command}" ]; then
-        declare -a docker_line=('"docker"', ${docker_opts[@]}, "\"${container}\"")
-    else
-        declare -a docker_line=('"docker"', ${docker_opts[@]}, "\"${container}\"", "\"${docker_command}\"")
-    fi
+if [ -z ${docker_command} ]; then
+    slice_index=6
+else
+    slice_index=7
+fi
 
-    cat > ${build_file} << EOF
+all_var=($@)
+declare -a docker_opts=("${all_var[@]:${slice_index}}")
+
+if [ -z "${docker_command}" ]; then
+    declare -a docker_line=('"docker"', ${docker_opts[@]}, "\"${container}\"")
+else
+    declare -a docker_line=('"docker"', ${docker_opts[@]}, "\"${container}\"", "\"${docker_command}\"")
+fi
+
+cat > ${build_file} << EOF
 #cloud-config
 users:
   - name: ${username}
@@ -36,5 +44,3 @@ runcmd:
   - [ "usermod", "-aG", "docker", "${username}" ]
   - [ ${docker_line[@]} ]
 EOF
-
-}

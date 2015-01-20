@@ -9,9 +9,6 @@ fi
 
 : ${GCE_PROJECT:="rancher-dev"}
 
-dir=$(dirname $0)
-source ${dir}/lib/user_data_clusters
-
 gcloud -v >/dev/null 2>&1 || {
     echo "gcloud command not found." 1>&2
     exit 1
@@ -303,7 +300,7 @@ generate_build_script() # signature: role container
     fi
 
     if [ "$(get_user_data_flag)" = "true" ]; then
-        user_data_clusters $(id -un) "$(cat ~/.ssh/id_rsa.pub)" ${build_file} "${container}" docker_opts[@] "${docker_cmd}"
+        user_data_clusters $(id -un) "$(cat ~/.ssh/id_rsa.pub)" ${build_file} "${container}" "${docker_cmd}" "${docker_opts[@]}"
     else
             cat > ${build_file} << EOF
 #!/bin/bash
