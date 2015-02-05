@@ -2,6 +2,8 @@
 
 set -e 
 
+INSTANCE_COUNT=3
+
 if [ $(whoami) == "root" ]; then
     echo "Do not run as root!" 1>&2
     exit 1
@@ -41,10 +43,8 @@ gce-10acre-ranch Usage:
            debian-7-backports
            fedora-21
            ubuntu
-    -p - privileged (needed for fedora)
+    -p - privileged
         - server
-        - agent
-        - all
     -q - Do not prompt user
     -r - Registration url
     -w - Wait for a successful server ping
@@ -278,11 +278,7 @@ generate_build_script() # signature: role container
             default_container="rancher/agent"
 
             IP=$(get_master_ip)
-            docker_opts=('"run"', '"-d"', '"-v"', '"/var/run/docker.sock:/var/run/docker.sock"');
-
-            if [[ "${PRIVILEGED_AGENT}" = "true" ]]; then
-                docker_opts+=(, '"--privileged"')
-            fi
+            docker_opts=('"run"', '"--privileged"', '"-d"', '"-v"', '"/var/run/docker.sock:/var/run/docker.sock"');
 
             docker_cmd=${REGISTRATION_URL:="http://${IP}:8080"}
             build_file="/tmp/10acre-worker-build.sh"
