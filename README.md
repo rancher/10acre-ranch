@@ -39,11 +39,17 @@ gce-10acre-ranch Usage:
 
 To set the GCE Project export the environment variable `GCE_PROJECT="<project>"`
 
-To deploy a cluster:
+### To deploy a cluster:
 
 ```
-./gce-10acre-ranch -c <clustername> -n <number of nodes>
+./gce-10acre-ranch -c <clustername> -n <number of nodes> -w
 ```
+
+### Deploy source code versions
+```
+gce-10acre-ranch -s rancher/build-master -p server -c rancher-dev -n 1 -w
+```
+
 Currently all nodes will be deployed with Ubuntu 14.04. The naming convention is:
 <clustername>-10acre-master-0
 <clustername>-10acre-[1:N]
@@ -63,29 +69,27 @@ Or both
 The Docker images must be real and accessible to Docker.
 
 
-
-
-
-Get the master IP:
+### Get the master IP:
 
 ```
 ./gce-10acre-ranch -c <cluster name> -i
 ```
 You can hit this IP over port 8080 to get to the UI
 
-List all Clusters:
+### List all Clusters:
 
 ```
 ./gce-10acre-ranch -l
 ```
-List all the nodes:
+### List all the nodes:
 
 ```
 ./gce-10acre-ranch -c <cluster name> -l
 ```
 
-Destroy the cluster(-q for quiet):
+### Destroy the cluster(-q for quiet):
 
 ```
 ./gce-10acre-ranch -c <cluster name> -d (-q)
 ```
+
