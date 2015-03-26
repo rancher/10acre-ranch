@@ -92,6 +92,10 @@ You can hit this IP over port 8080 to get to the UI
 ```
 ./gce-10acre-ranch -c <cluster name> -d (-q)
 ```
+### Bugs & Issues
+Please submit bugs and issues to [rancherio/rancher](//github.com/rancherio/rancher/issues) with a title starting with `[10acre-ranch] `.
+
+Or just [click here](//github.com/rancherio/rancher/issues/new?title=%5B10acre-ranch%5D%20) to create a new issue.
 
 # License
 Copyright (c) 2014-2015 [Rancher Labs, Inc.](http://rancher.com)
