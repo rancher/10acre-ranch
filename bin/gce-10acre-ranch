@@ -27,7 +27,7 @@ gce-10acre-ranch Usage:
     -i - Show the IP address of the master
     -h - Print this message
     -l - List nodes or clusters if no -c is passed
-    -n - Number of nodes 
+    -n - Number of nodes [defaults to 3]
     -s - Server Container:
             needs full container repo/name[:tag] 
     -o - OS image
@@ -47,9 +47,11 @@ gce-10acre-ranch Usage:
         - all
     -q - Do not prompt user
     -r - Registration url
-    -w - Wait for a successful server ping
 EOF
 }
+
+WAIT=true
+INSTANCE_COUNT=3
 
 while getopts ":a:bc:de:hiln:o:p:qr:s:w" opt;do
     case $opt in
@@ -114,7 +116,7 @@ while getopts ":a:bc:de:hiln:o:p:qr:s:w" opt;do
         SERVER_CONTAINER="${OPTARG}"
         ;;
     w)
-        WAIT=true
+        echo "-w Deprecated... now default behavior"
         ;;
     \?)
         echo "Invalid arguemnts" >&2
@@ -170,8 +172,8 @@ get_os_image()
 
     # Has to be a better more dynamic way...that also isn't slow.
     case $OS_FAMILY in
-        "ubuntu")
-            image="ubuntu-14-04"
+        ubuntu*)
+            image="https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/${OS_FAMILY}"
             ;;
         "coreos-alpha")
             image="https://www.googleapis.com/compute/v1/projects/coreos-cloud/global/images/coreos-alpha-509-1-0-v20141124"
