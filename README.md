@@ -17,7 +17,7 @@ gce-10acre-ranch Usage:
     -i - Show the IP address of the master
     -h - Print this message
     -l - List nodes or clusters if no -c
-    -n - Number of nodes
+    -n - Number of nodes [defaults to 3]
     -s - Server Container:
            needs full container repo/name[:tag]
     -o - OS Family
@@ -34,7 +34,6 @@ gce-10acre-ranch Usage:
     -p - privileged agent (needed for Fedora)
     -q - Do not prompt user
     -r - Registration url
-    -w - Wait for successful server ping.
 ```
 
 To set the GCE Project export the environment variable `GCE_PROJECT="<project>"`
