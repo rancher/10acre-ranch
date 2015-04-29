@@ -6,37 +6,50 @@ Prerequisites:
 
 =========
 ```
-./gce-10acre-ranch -h
 gce-10acre-ranch Usage:
     gce-10acre-ranch [opts]
     -a - Agent Container:
-           needs full container repo/name[:tag]
-    -c - Cluster name
+            needs full container repo/name[:tag]
+    -c - Cluster name[Required]
     -d - DELETE ALL NODES
     -e - External IP for master...(yes this is getting rediculous)
     -i - Show the IP address of the master
     -h - Print this message
-    -l - List nodes or clusters if no -c
+    -l - List nodes or clusters if no -c is passed
     -n - Number of nodes [defaults to 3]
     -s - Server Container:
-           needs full container repo/name[:tag]
-    -o - OS Family
-    	   centos-6 (Servers only. Configuration is manual)
+            needs full container repo/name[:tag]
+    -o - OS image
+           centos-6 (Servers only. Configuration is manual)
            centos-7 (Servers only. Configuration is manual)
-           rhel-6 (Servers only.)
-           rhel-7 (Servers only.)
-           coreos-alpha
-           coreos-beta
+           rhel-6 (Servers only. Config is manual)
+           rhel-7 (Servers only. Config is manual)
+           coreos-<version>
            coreos-stable
            debian-7-backports
-           fedora-21
-           ubuntu
-    -p - privileged agent (needed for Fedora)
+           fedora-21 (Rancher Labs Only)
+           ubuntu-<version>
+    -p - privileged (needed for fedora)
+        - server
+        - agent
+        - all
     -q - Do not prompt user
     -r - Registration url
 ```
 
-To set the GCE Project export the environment variable `GCE_PROJECT="<project>"`
+## If you are using this outside of Rancher Labs
+
+Set the GCE Project export the environment variable **`GCE_PROJECT="<project>"`**
+
+### Images
+
+For CoreOS and Ubuntu first look at the output of:
+
+`gcloud compute images list --project <project>`
+
+These versions do not always have aliases and update frequently. So we are just passing that along.
+
+The default is Ubuntu-14-04 if no -o option is specified.
 
 ### To deploy a cluster:
 
@@ -60,10 +73,10 @@ Server
 ./gce-10acre-ranch -c <clustername> -n <number of nodes> -s rancher/server:development
 
 Agent
-./gce-10acre-ranch -c <clustername> -n <number of nodes> -a cloudnautique/agent:development
+./gce-10acre-ranch -c <clustername> -n <number of nodes> -a <user>/agent:development
 
 Or both
-./gce-10acre-ranch -c <clustername> -n <number of nodes> -a cloudnautique/agent:development -s ibuildthecloud/dev-server
+./gce-10acre-ranch -c <clustername> -n <number of nodes> -a <user>/agent:development -s <user>/dev-server
 ```
 The Docker images must be real and accessible to Docker.
 
@@ -91,6 +104,7 @@ You can hit this IP over port 8080 to get to the UI
 ```
 ./gce-10acre-ranch -c <cluster name> -d (-q)
 ```
+
 ### Contact
 For bugs, questions, comments, corrections, suggestions, etc., open an issue in [rancherio/rancher](//github.com/rancherio/rancher/issues) with a title starting with `[10acre-ranch] `.
 
