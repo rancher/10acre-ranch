@@ -10,18 +10,18 @@ Prerequisites:
 gce-10acre-ranch Usage:
     gce-10acre-ranch [opts]
     -a - Agent Container:
-           needs full container repo/name[:tag]
-    -c - Cluster name
+            needs full container repo/name[:tag]
+    -c - Cluster name[Required]
     -d - DELETE ALL NODES
     -e - External IP for master...(yes this is getting rediculous)
     -i - Show the IP address of the master
     -h - Print this message
-    -l - List nodes or clusters if no -c
+    -l - List nodes or clusters if no -c is passed
     -n - Number of nodes [defaults to 3]
     -s - Server Container:
-           needs full container repo/name[:tag]
-    -o - OS Family
-    	   centos-6 (Servers only. Configuration is manual)
+            needs full container repo/name[:tag]
+    -o - OS image
+           centos-6 (Servers only. Configuration is manual)
            centos-7 (Servers only. Configuration is manual)
            rhel-6 (Servers only.)
            rhel-7 (Servers only.)
@@ -31,22 +31,25 @@ gce-10acre-ranch Usage:
            debian-7-backports
            fedora-21
            ubuntu
-    -p - privileged agent (needed for Fedora)
+    -p - privileged (needed for fedora)
+        - server
+        - agent
+        - all
     -q - Do not prompt user
     -r - Registration url
 ```
 
-To set the GCE Project export the environment variable `GCE_PROJECT="<project>"`
+To set the GCE Project export the environment variable `export GCE_PROJECT="<project>"`
 
 ### To deploy a cluster:
 
 ```
-./gce-10acre-ranch -c <clustername> -n <number of nodes> -w
+./gce-10acre-ranch -c <clustername> -n <number of nodes>
 ```
 
 ### Deploy source code versions
 ```
-gce-10acre-ranch -s rancher/build-master -p server -c rancher-dev -n 1 -w
+gce-10acre-ranch -s rancher/build-master -p server -c rancher-dev -n 1
 ```
 
 Currently all nodes will be deployed with Ubuntu 14.04. The naming convention is:
@@ -110,4 +113,3 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-
