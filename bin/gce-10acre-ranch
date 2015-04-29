@@ -33,14 +33,13 @@ gce-10acre-ranch Usage:
     -o - OS image
            centos-6 (Servers only. Configuration is manual)
            centos-7 (Servers only. Configuration is manual)
-           rhel-6 (Servers only.)
-           rhel-7 (Servers only.)
-           coreos-alpha
-           coreos-beta
-           coreos-stable
+           rhel-6 (Servers only. Config is manual)
+           rhel-7 (Servers only. Config is manual)
+           coreos-<version>
+           coreos (stable)
            debian-7-backports
-           fedora-21
-           ubuntu
+           fedora-21 (Rancher Labs Only)
+           ubuntu-<version>
     -p - privileged (needed for fedora)
         - server
         - agent
@@ -52,6 +51,7 @@ EOF
 
 WAIT=true
 INSTANCE_COUNT=3
+OS_FAMILY=ubuntu-14-04
 
 while getopts ":a:bc:de:hiln:o:p:qr:s:w" opt;do
     case $opt in
@@ -175,13 +175,10 @@ get_os_image()
         ubuntu*)
             image="https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/${OS_FAMILY}"
             ;;
-        "coreos-alpha")
-            image="https://www.googleapis.com/compute/v1/projects/coreos-cloud/global/images/coreos-alpha-509-1-0-v20141124"
+        coreos-*)
+            image="https://www.googleapis.com/compute/v1/projects/coreos-cloud/global/images/${OS_FAMILY}"
             ;;
-        "coreos-beta")
-            image="https://www.googleapis.com/compute/v1/projects/coreos-cloud/global/images/coreos-beta-494-1-0-v20141124"
-            ;;
-        "coreos-stable")
+        "coreos")
             image="coreos"
             ;;
         "centos-6")
@@ -203,7 +200,8 @@ get_os_image()
             image="fedora-cloud-base-21-20141217"
             ;;
         *)
-            image="ubuntu-14-04"
+            echo "Invalid OS Selection: $OS_FAMILY" 1>&2
+            exit 1
             ;;
     esac
 
