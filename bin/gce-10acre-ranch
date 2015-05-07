@@ -252,6 +252,15 @@ gcloud_create()
         $gcloud_args
 }
 
+get_reg_url()
+{
+    ## This is a bit hacky...
+    local reg_tokens_link
+    reg_tokens_link=$(curl -X POST http://${1}:8080/v1/registrationtokens?projectId=1a5|python -c'import json,sys; print(json.load(sys.stdin)["links"]["self"])')
+    sleep 1
+    echo $(curl -s -X GET $reg_tokens_link|python -c'import json,sys; print(json.load(sys.stdin)["registrationUrl"])')?projectId=1a5
+}
+
 
 generate_build_script() # signature: role container
 {
@@ -284,7 +293,7 @@ generate_build_script() # signature: role container
                 docker_opts+=(, '"--privileged"')
             fi
 
-            docker_cmd=${REGISTRATION_URL:="http://${IP}:8080"}
+            docker_cmd=${REGISTRATION_URL:="$(get_reg_url ${IP})"}
             build_file="/tmp/10acre-worker-build.sh"
             ;;
         *)
