@@ -337,7 +337,7 @@ build_compute()
     done
 
     generate_build_script "worker" "${AGENT_CONTAINER}"
-    gcloud_create "${instances}" "/tmp/10acre-worker-build.sh" "alt-http-server open-compute-nodes"
+    gcloud_create "${instances}" "/tmp/10acre-worker-build.sh" "alt-http-server,open-compute-nodes"
 }
 
 build_cluster()
