@@ -46,14 +46,16 @@ gce-10acre-ranch Usage:
         - all
     -q - Do not prompt user
     -r - Registration url
+    -t - Test docker repos
 EOF
 }
 
 WAIT=true
 INSTANCE_COUNT=3
 OS_FAMILY=ubuntu-14-04
+DOCKER_URL="https://get.docker.com/"
 
-while getopts ":a:bc:de:hiln:o:p:qr:s:w" opt;do
+while getopts ":a:bc:de:hiln:o:p:qr:s:tw" opt;do
     case $opt in
     a)
         AGENT_CONTAINER="${OPTARG}"
@@ -115,6 +117,9 @@ while getopts ":a:bc:de:hiln:o:p:qr:s:w" opt;do
     s)
         SERVER_CONTAINER="${OPTARG}"
         ;;
+    t)
+        DOCKER_URL="https://test.docker.com/"
+        ;;
     w)
         echo "-w Deprecated... now default behavior"
         ;;
@@ -172,6 +177,9 @@ get_os_image()
 
     # Has to be a better more dynamic way...that also isn't slow.
     case $OS_FAMILY in
+        *-rancher-base)
+            image="https://www.googleapis.com/compute/v1/projects/rancher-dev/global/images/${OS_FAMILY}"
+            ;;
         ubuntu*)
             image="https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/${OS_FAMILY}"
             ;;
@@ -309,12 +317,12 @@ generate_build_script() # signature: role container
     fi
 
     if [ "$(get_user_data_flag)" = "true" ]; then
-        user_data_clusters $(id -un) "$(cat ~/.ssh/id_rsa.pub)" ${build_file} "${container}" "${docker_cmd}" "${docker_opts[@]}"
+        user_data_clusters $(id -un) "$(cat ~/.ssh/id_rsa.pub)" ${build_file} "${container}" "${DOCKER_URL}" "${docker_cmd}" "${docker_opts[@]}"
     else
             cat > ${build_file} << EOF
 #!/bin/bash
 
-curl -sSL --retry 5 --retry-delay 10 https://get.docker.com/| sh
+curl -sSL --retry 5 --retry-delay 10 ${DOCKER_URL}| sh
 sleep 5
 docker $(echo ${docker_opts[@]}| sed -e 's/,//g'|sed -e 's/\"//g') ${container} ${docker_cmd}
 EOF

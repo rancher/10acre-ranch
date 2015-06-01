@@ -35,6 +35,7 @@ gce-10acre-ranch Usage:
         - all
     -q - Do not prompt user
     -r - Registration url
+    -t - Use https://test.docker.com when installing docker
 ```
 
 ## If you are using this outside of Rancher Labs

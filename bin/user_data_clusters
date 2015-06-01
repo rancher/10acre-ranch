@@ -7,12 +7,13 @@ sshKey=$2
 
 build_file=$3
 container=$4
-docker_command=$5
+docker_url=$5
+docker_command=$6
 
 if [ -z ${docker_command} ]; then
-    slice_index=6
-else
     slice_index=7
+else
+    slice_index=8
 fi
 
 all_var=($@)
@@ -37,7 +38,7 @@ users:
 runcmd:
   - [ "sleep", "10" ]
   - [ "modprobe", "arptable_filter" ]
-  - [ "curl", "-o", "/tmp/docker_install.sh", "-sSL", "https://get.docker.com" ]
+  - [ "curl", "-o", "/tmp/docker_install.sh", "-sSL", "${docker_url}" ]
   - [ "/bin/sh", "/tmp/docker_install.sh" ]
   - [ "service", "docker", "start" ]
   - [ "sleep", "10" ]
