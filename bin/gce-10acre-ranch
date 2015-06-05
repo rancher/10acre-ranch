@@ -368,7 +368,7 @@ build_cluster()
 main() 
 {
     if [[ "${LIST_NODES_FLAG}" = "true" && -z "${CLUSTER_NAME}" ]]; then
-        list_nodes | grep -- '-master-' | sed -e 's/^\(.*\)\(-10acre-master.*\)$/\1/' | sort -u
+        list_nodes | grep -- '-10acre-master-' | sed -e 's/^\(.*\)\(-10acre-master.*\)$/\1/' | sort -u
     elif [[ "${LIST_NODES_FLAG}" = "true" && "${CLUSTER_NAME}" ]]; then
         list_nodes 
     elif [ "${MASTER_IP_FLAG}" = "true" ]; then
