@@ -41,12 +41,12 @@ To set the GCE Project export the environment variable `GCE_PROJECT="<project>"`
 ### To deploy a cluster:
 
 ```
-./gce-10acre-ranch -c <clustername> -n <number of nodes> -w
+./gce-10acre-ranch -c <clustername> -n <number of nodes>
 ```
 
 ### Deploy source code versions
 ```
-gce-10acre-ranch -s rancher/build-master -p server -c rancher-dev -n 1 -w
+gce-10acre-ranch -s rancher/build-master -p server -c rancher-dev -n 1
 ```
 
 Currently all nodes will be deployed with Ubuntu 14.04. The naming convention is:
