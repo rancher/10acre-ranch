@@ -292,7 +292,7 @@ generate_build_script() # signature: role container
 
             ;;
         worker)
-            default_container="rancher/agent"
+            default_container="rancher/agent:latest"
 
             IP=$(get_master_ip)
             docker_opts=('"run"', '"-d"', '"-v"', '"/var/run/docker.sock:/var/run/docker.sock"');
@@ -323,6 +323,10 @@ generate_build_script() # signature: role container
 #!/bin/bash
 
 curl -sSL --retry 5 --retry-delay 10 ${DOCKER_URL}| sh
+if [ -r /etc/centos-release ] || [ -r /etc/redhat-release ]; then
+    yum -y install docker-selinux
+    systemctl start docker
+fi
 sleep 5
 docker $(echo ${docker_opts[@]}| sed -e 's/,//g'|sed -e 's/\"//g') ${container} ${docker_cmd}
 EOF
