@@ -368,7 +368,10 @@ build_compute()
     local instances
     
     build_file="/tmp/10acre-worker-build.sh"
-    for i in $(seq 1 ${INSTANCE_COUNT}); do
+
+    offset=$(list_nodes|grep -v '^NAME\|-10acre-master-0'|wc -l)
+    
+    for i in $(seq $((${offset} + 1)) $((${offset} + ${INSTANCE_COUNT}))); do
         instances="${CLUSTER_NAME}-${i} ${instances}"
     done
 
