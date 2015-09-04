@@ -260,17 +260,48 @@ gcloud_create()
         $gcloud_args
 }
 
+create_reg_tokens() # Signature: rancher_server_ip
+{
+    project_id=$(curl -s -X GET http://${1}:8080/v1/projects|python -c'import json,sys;print(json.load(sys.stdin)["data"][0]["id"])')
+    echo $(curl -s -X POST http://${1}:8080/v1/projects/${project_id}/registrationtokens|python -c'import json,sys; print(json.load(sys.stdin)["links"]["self"])')
+}
+
 get_reg_url()
 {
     ## This is a bit hacky...
     local reg_tokens_link
-    reg_tokens_link=$(curl -s -X POST http://${1}:8080/v1/registrationtokens?projectId=1a5|python -c'import json,sys; print(json.load(sys.stdin)["links"]["self"])')
+    reg_tokens_link=$(create_reg_tokens ${1})
     sleep 1
-    echo $(curl -s -X GET $reg_tokens_link|python -c'import json,sys; print(json.load(sys.stdin)["registrationUrl"])')?projectId=1a5
+    echo $(curl -s -X GET $reg_tokens_link|python -c'import json,sys; print(json.load(sys.stdin)["registrationUrl"])')
+}
+
+get_run_cmd()
+{
+    ip=$(get_master_ip)
+    reg_tokens_link=$(create_reg_tokens ${ip})
+    sleep 1
+    echo $(curl -s -X GET $reg_tokens_link|python -c'import json,sys; print(json.load(sys.stdin)["command"])')
+}
+
+create_file()
+{
+    local build_file=${1}
+    local docker_run_cmd=${2}
+    cat > ${build_file} << EOF
+#!/bin/bash
+
+curl -sSL --retry 5 --retry-delay 10 ${DOCKER_URL}| sh
+if [ -r /etc/centos-release ] || [ -r /etc/redhat-release ]; then
+    yum -y install docker-selinux
+    systemctl start docker
+fi
+sleep 5
+${docker_run_cmd}
+EOF
 }
 
 
-generate_build_script() # signature: role container
+generate_build_script() # signature: role container build_file
 {
     local container
     local default_container
@@ -283,7 +314,6 @@ generate_build_script() # signature: role container
             default_container="rancher/server"
 
             docker_opts=('"run"', '"-d"', '"-p"', '"8080:8080"');
-            build_file="/tmp/10acre-master-build.sh"
             docker_cmd=
 
             if [[ "${PRIVILEGED_MASTER}" = "true" ]]; then
@@ -302,7 +332,6 @@ generate_build_script() # signature: role container
             fi
 
             docker_cmd=${REGISTRATION_URL:="$(get_reg_url ${IP})"}
-            build_file="/tmp/10acre-worker-build.sh"
             ;;
         *)
             echo "Can not generate build script"
@@ -316,40 +345,41 @@ generate_build_script() # signature: role container
         container="${2}"
     fi
 
+    build_file=$3
+
     if [ "$(get_user_data_flag)" = "true" ]; then
         user_data_clusters $(id -un) "$(cat ~/.ssh/id_rsa.pub)" ${build_file} "${container}" "${DOCKER_URL}" "${docker_cmd}" "${docker_opts[@]}"
     else
-            cat > ${build_file} << EOF
-#!/bin/bash
-
-curl -sSL --retry 5 --retry-delay 10 ${DOCKER_URL}| sh
-if [ -r /etc/centos-release ] || [ -r /etc/redhat-release ]; then
-    yum -y install docker-selinux
-    systemctl start docker
-fi
-sleep 5
-docker $(echo ${docker_opts[@]}| sed -e 's/,//g'|sed -e 's/\"//g') ${container} ${docker_cmd}
-EOF
+        docker_run_cmd="docker $(echo ${docker_opts[@]}| sed -e 's/,//g'|sed -e 's/\"//g') ${container} ${docker_cmd}"
+        create_file ${build_file} "${docker_run_cmd}"
     fi
 
 }
 
 build_master()
 {
-    generate_build_script "master" "${SERVER_CONTAINER}" 
-    gcloud_create "${MASTER_NAME}" "/tmp/10acre-master-build.sh" "alt-http-server" ${EXTERNAL_IP}
+    build_file="/tmp/10acre-master-build.sh"
+    generate_build_script "master" "${SERVER_CONTAINER}" ${build_file}
+    gcloud_create "${MASTER_NAME}" "${build_file}" "alt-http-server" ${EXTERNAL_IP}
 }
 
 build_compute()
 {
     local instances
     
+    build_file="/tmp/10acre-worker-build.sh"
     for i in $(seq 1 ${INSTANCE_COUNT}); do
         instances="${CLUSTER_NAME}-${i} ${instances}"
     done
 
-    generate_build_script "worker" "${AGENT_CONTAINER}"
-    gcloud_create "${instances}" "/tmp/10acre-worker-build.sh" "alt-http-server,open-compute-nodes"
+    if [ -n "${AGENT_CONTAINER}" ]; then 
+        generate_build_script "worker" "${AGENT_CONTAINER}" ${build_file}
+    else
+        docker_run_cmd="$(echo $(get_run_cmd)|sed 's/^sudo //')"
+        create_file ${build_file} "${docker_run_cmd}"
+    fi
+
+    gcloud_create "${instances}" "${build_file}" "alt-http-server,open-compute-nodes"
 }
 
 build_cluster()
