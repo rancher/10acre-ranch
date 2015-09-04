@@ -354,17 +354,19 @@ build_compute()
 
 build_cluster()
 {
-    build_master
-    if [ "$WAIT" = "true" ]; then
-        IP=$(get_master_ip)
-        echo -n "Waiting for server to start "
-        while sleep 5; do
-            if [ "$(curl -s http://${IP}:8080/ping)" = "pong" ]; then
-                echo Success
-                break
-            fi
-            echo -n "."
-        done
+    if [ -z "${REGISTRATION_URL}" ]; then
+        build_master
+        if [ "$WAIT" = "true" ]; then
+            IP=$(get_master_ip)
+            echo -n "Waiting for server to start "
+            while sleep 5; do
+                if [ "$(curl -s http://${IP}:8080/ping)" = "pong" ]; then
+                    echo Success
+                    break
+                fi
+                echo -n "."
+            done
+        fi
     fi
     build_compute
 }
