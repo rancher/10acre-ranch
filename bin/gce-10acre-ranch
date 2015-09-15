@@ -401,7 +401,9 @@ build_cluster()
             done
         fi
     fi
-    build_compute
+    if [ "${INSTANCE_COUNT}" -gt "0" ]; then
+        build_compute
+    fi
 }
 
 main() 
