@@ -278,7 +278,7 @@ gcloud_create()
         $gcloud_args
 
     gcloud compute firewall-rules create rancher-access --network ${NETWORK} --allow TCP:8080 \
-           --source-ranges 0.0.0.0/0 --target-tags $3}
+           --source-ranges 0.0.0.0/0 --target-tags ${3}
 }
 
 create_reg_tokens() # Signature: rancher_server_ip
