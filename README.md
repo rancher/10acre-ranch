@@ -16,7 +16,7 @@ gce-10acre-ranch Usage:
     -i - Show the IP address of the master
     -h - Print this message
     -l - List nodes or clusters if no -c is passed
-    -m - Machine type [default is n1-standard-1]
+    -m - Machine type [default is f1-micro]
     -n - Number of nodes [defaults to 3]
     -N - Network [default is default]
     -s - Server Container:
