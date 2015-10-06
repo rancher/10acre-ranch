@@ -178,8 +178,6 @@ delete_nodes()
     fi
 
     gcloud compute instances delete ${opts} --project ${GCE_PROJECT} --zone ${ZONE} ${nodes}
-
-    gcloud compute firewall-rules delete --quiet rancher-access
 }
 
 get_master_ip()
@@ -276,9 +274,6 @@ gcloud_create()
 
     gcloud compute instances create ${1} \
         $gcloud_args
-
-    gcloud compute firewall-rules create rancher-access --network ${NETWORK} --allow TCP:8080,ICMP,UDP:500,UDP:4500 \
-           --source-ranges 0.0.0.0/0 --target-tags ${3}
 }
 
 create_reg_tokens() # Signature: rancher_server_ip
