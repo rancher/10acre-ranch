@@ -1,5 +1,5 @@
 #!/bin/bash
-
+#set -o xtrace
 set -e 
 
 if [ $(whoami) == "root" ]; then
@@ -27,7 +27,9 @@ gce-10acre-ranch Usage:
     -i - Show the IP address of the master
     -h - Print this message
     -l - List nodes or clusters if no -c is passed
+    -m - Machine type (g1-small default)
     -n - Number of nodes [defaults to 3]
+    -N - Network [default is default]
     -s - Server Container:
             needs full container repo/name[:tag] 
     -o - OS image
@@ -47,6 +49,7 @@ gce-10acre-ranch Usage:
     -q - Do not prompt user
     -r - Registration url
     -t - Test docker repos
+    -z - Zone [us-central1-f default]
 EOF
 }
 
@@ -54,8 +57,11 @@ WAIT=true
 INSTANCE_COUNT=3
 OS_FAMILY=ubuntu-14-04
 DOCKER_URL="https://get.docker.com/"
+MACHINE_TYPE="g1-small"
+ZONE="us-central1-f"
+NETWORK="default"
 
-while getopts ":a:bc:de:hiln:o:p:qr:s:tw" opt;do
+while getopts ":a:bc:de:hilm:n:o:p:qr:s:twz:N:" opt;do
     case $opt in
     a)
         AGENT_CONTAINER="${OPTARG}"
@@ -83,6 +89,12 @@ while getopts ":a:bc:de:hiln:o:p:qr:s:tw" opt;do
         ;;
     l)
         LIST_NODES_FLAG="true"
+        ;;
+    m)
+        MACHINE_TYPE=${OPTARG}
+        ;;
+    N)
+        NETWORK=${OPTARG}
         ;;
     n)
         INSTANCE_COUNT=${OPTARG}
@@ -128,6 +140,9 @@ while getopts ":a:bc:de:hiln:o:p:qr:s:tw" opt;do
         print_help
         exit 1
         ;;
+    z)
+        ZONE="${OPTARG}"
+        ;;
     :)
         echo "Option -${OPTARG} requires arguement." >&2
         print_help
@@ -145,7 +160,7 @@ list_nodes()
         opts="--regex \"${CLUSTER_NAME}.*\""
     fi
 
-    gcloud compute instances list --project ${GCE_PROJECT} --zone us-central1-f ${opts}
+    gcloud compute instances list --project ${GCE_PROJECT} --zone ${ZONE} ${opts}
 }
 
 delete_nodes()
@@ -162,12 +177,12 @@ delete_nodes()
         opts=""
     fi
 
-    gcloud compute instances delete ${opts} --project ${GCE_PROJECT} --zone us-central1-f ${nodes}
+    gcloud compute instances delete ${opts} --project ${GCE_PROJECT} --zone ${ZONE} ${nodes}
 }
 
 get_master_ip()
 {
-    IP=$(gcloud compute instances describe "${MASTER_NAME}" --project ${GCE_PROJECT} --zone us-central1-f | grep natIP | cut -d':' -f2)
+    IP=$(gcloud compute instances describe "${MASTER_NAME}" --project ${GCE_PROJECT} --zone ${ZONE} | grep natIP | cut -d':' -f2)
     echo $IP
 }
 
@@ -243,14 +258,15 @@ gcloud_create()
         metadata_key=user-data
     fi
 
-    gcloud_args="--zone "us-central1-f" --machine-type "n1-standard-1" \
-        --network "default" \
-        --project "${GCE_PROJECT}" \
-        --metadata-from-file ${metadata_key}=${2} \
-        --maintenance-policy "MIGRATE" \
-        --scopes "https://www.googleapis.com/auth/devstorage.read_only" \
-        --tags ${3} \
-        --image $(get_os_image) "
+    gcloud_args="--zone ${ZONE}
+        --machine-type ${MACHINE_TYPE}
+        --network ${NETWORK}
+        --project ${GCE_PROJECT}
+        --metadata-from-file ${metadata_key}=${2}
+        --maintenance-policy MIGRATE
+        --scopes https://www.googleapis.com/auth/devstorage.read_only
+        --image $(get_os_image)
+        --tags ${3} "
 
     if [ ! -z ${4} ]; then
         gcloud_args="${gcloud_args} --address ${4}"
