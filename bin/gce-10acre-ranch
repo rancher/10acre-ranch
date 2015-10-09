@@ -27,7 +27,7 @@ gce-10acre-ranch Usage:
     -i - Show the IP address of the master
     -h - Print this message
     -l - List nodes or clusters if no -c is passed
-    -m - Machine type (f1-micro default)
+    -m - Machine type (g1-small default)
     -n - Number of nodes [defaults to 3]
     -N - Network [default is default]
     -s - Server Container:
@@ -57,7 +57,7 @@ WAIT=true
 INSTANCE_COUNT=3
 OS_FAMILY=ubuntu-14-04
 DOCKER_URL="https://get.docker.com/"
-MACHINE_TYPE="f1-micro"
+MACHINE_TYPE="g1-small"
 ZONE="us-central1-f"
 NETWORK="default"
 
