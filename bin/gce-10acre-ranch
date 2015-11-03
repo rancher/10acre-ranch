@@ -54,7 +54,7 @@ EOF
 }
 
 WAIT=true
-INSTANCE_COUNT=3
+INSTANCE_COUNT=1
 OS_FAMILY=ubuntu-14-04
 DOCKER_URL="https://get.docker.com/"
 MACHINE_TYPE="g1-small"
