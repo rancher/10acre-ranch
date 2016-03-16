@@ -55,7 +55,7 @@ EOF
 
 WAIT=true
 INSTANCE_COUNT=1
-OS_FAMILY=ubuntu-14-04
+OS_FAMILY=ubuntu-15-10
 DOCKER_URL="https://get.docker.com/"
 MACHINE_TYPE="g1-small"
 ZONE="us-central1-f"
@@ -309,8 +309,15 @@ create_file()
 curl -sSL --retry 5 --retry-delay 10 ${DOCKER_URL}| sh
 if [ -r /etc/centos-release ] || [ -r /etc/redhat-release ]; then
     yum -y install docker-selinux
+fi
+
+if command -v systemctl > /dev/null; then
+    echo "Starting docker..."
+    systemctl stop docker
+    sleep 10
     systemctl start docker
 fi
+
 sleep 5
 ${docker_run_cmd}
 EOF
