@@ -24,14 +24,13 @@ gce-10acre-ranch Usage:
     -c - Cluster name[Required]
     -d - DELETE ALL NODES
     -e - External IP for master...(yes this is getting rediculous)
-    -i - Show the IP address of the master
     -h - Print this message
+    -i - Show the IP address of the master
     -l - List nodes or clusters if no -c is passed
-    -m - Machine type (g1-small default)
+    -m - Master Machine type (g1-small default)
+    -M - Node Machine type (g1-small default)
     -n - Number of nodes [defaults to 3]
     -N - Network [default is default]
-    -s - Server Container:
-            needs full container repo/name[:tag] 
     -o - OS image
            centos-6 (Servers only. Configuration is manual)
            centos-7 (Servers only. Configuration is manual)
@@ -48,6 +47,8 @@ gce-10acre-ranch Usage:
         - all
     -q - Do not prompt user
     -r - Registration url
+    -s - Server Container:
+            needs full container repo/name[:tag] 
     -t - Test docker repos
     -z - Zone [us-central1-f default]
 EOF
@@ -57,11 +58,12 @@ WAIT=true
 INSTANCE_COUNT=1
 OS_FAMILY=ubuntu-15-10
 DOCKER_URL="https://get.docker.com/"
-MACHINE_TYPE="g1-small"
+MASTER_MACHINE_TYPE="g1-small"
+NODE_MACHINE_TYPE="g1-small"
 ZONE="us-central1-f"
 NETWORK="default"
 
-while getopts ":a:bc:de:hilm:n:o:p:qr:s:twz:N:" opt;do
+while getopts ":a:bc:de:hilm:M:n:o:p:qr:s:twz:N:" opt;do
     case $opt in
     a)
         AGENT_CONTAINER="${OPTARG}"
@@ -91,7 +93,10 @@ while getopts ":a:bc:de:hilm:n:o:p:qr:s:twz:N:" opt;do
         LIST_NODES_FLAG="true"
         ;;
     m)
-        MACHINE_TYPE=${OPTARG}
+        MASTER_MACHINE_TYPE=${OPTARG}
+        ;;
+    M)
+        NODE_MACHINE_TYPE=${OPTARG}
         ;;
     N)
         NETWORK=${OPTARG}
@@ -250,6 +255,7 @@ gcloud_create()
     # 2 - startup script path/filename
     # 3 - GCE tags
     # 4 - Master IP Address
+    # 5 - Machine Type
 
     local metadata_key=startup-script
     local gcloud_args
@@ -259,7 +265,7 @@ gcloud_create()
     fi
 
     gcloud_args="--zone ${ZONE}
-        --machine-type ${MACHINE_TYPE}
+        --machine-type ${5}
         --network ${NETWORK}
         --project ${GCE_PROJECT}
         --metadata-from-file ${metadata_key}=${2}
@@ -383,7 +389,7 @@ build_master()
 {
     build_file="/tmp/10acre-master-build.sh"
     generate_build_script "master" "${SERVER_CONTAINER}" ${build_file}
-    gcloud_create "${MASTER_NAME}" "${build_file}" "alt-http-server" ${EXTERNAL_IP}
+    gcloud_create "${MASTER_NAME}" "${build_file}" "alt-http-server" "${EXTERNAL_IP}" "${MASTER_MACHINE_TYPE}"
 }
 
 build_compute()
@@ -405,7 +411,7 @@ build_compute()
         create_file ${build_file} "${docker_run_cmd}"
     fi
 
-    gcloud_create "${instances}" "${build_file}" "alt-http-server,open-compute-nodes"
+    gcloud_create "${instances}" "${build_file}" "alt-http-server,open-compute-nodes" "" "${NODE_MACHINE_TYPE}"
 }
 
 build_cluster()
