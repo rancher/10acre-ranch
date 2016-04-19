@@ -5,29 +5,28 @@ Prerequisites:
 - Google Cloud SDK - [SDK](https://cloud.google.com/sdk/)
 
 =========
+Usage:
 ```
-gce-10acre-ranch Usage:
     gce-10acre-ranch [opts]
     -a - Agent Container:
             needs full container repo/name[:tag]
     -c - Cluster name[Required]
     -d - DELETE ALL NODES
     -e - External IP for master...(yes this is getting rediculous)
-    -i - Show the IP address of the master
     -h - Print this message
+    -i - Show the IP address of the master
     -l - List nodes or clusters if no -c is passed
-    -m - Machine type [default is f1-micro]
+    -m - Master Machine type (g1-small default)
+    -M - Node Machine type (g1-small default)
     -n - Number of nodes [defaults to 3]
     -N - Network [default is default]
-    -s - Server Container:
-            needs full container repo/name[:tag]
     -o - OS image
            centos-6 (Servers only. Configuration is manual)
            centos-7 (Servers only. Configuration is manual)
            rhel-6 (Servers only. Config is manual)
            rhel-7 (Servers only. Config is manual)
            coreos-<version>
-           coreos-stable
+           coreos (stable)
            debian-7-backports
            fedora-21 (Rancher Labs Only)
            ubuntu-<version>
@@ -37,13 +36,15 @@ gce-10acre-ranch Usage:
         - all
     -q - Do not prompt user
     -r - Registration url
-    -t - Use https://test.docker.com when installing docker
-    -z - Zone [default is us-central1-f]
+    -s - Server Container:
+            needs full container repo/name[:tag]
+    -t - Test docker repos
+    -z - Zone [us-central1-f default]
 ```
 
 ## If you are using this outside of Rancher Labs
 
-Set the GCE Project export the environment variable **`GCE_PROJECT="<project>"`**
+Set the GCE Project via environment variable: ```GCE_PROJECT="<project>"```
 
 ### Images
 
