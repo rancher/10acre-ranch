@@ -49,7 +49,7 @@ gce-10acre-ranch Usage:
     -r - Registration url
     -s - Server Container:
             needs full container repo/name[:tag] 
-    -t - Test docker repos
+    -u - Docker install URL
     -z - Zone [us-central1-f default]
 EOF
 }
@@ -57,13 +57,13 @@ EOF
 WAIT=true
 INSTANCE_COUNT=1
 OS_FAMILY=ubuntu-15-10
-DOCKER_URL="https://get.docker.com/"
+DOCKER_URL="https://releases.rancher.com/install-docker/1.10.3.sh"
 MASTER_MACHINE_TYPE="g1-small"
 NODE_MACHINE_TYPE="g1-small"
 ZONE="us-central1-f"
 NETWORK="default"
 
-while getopts ":a:bc:de:hilm:M:n:o:p:qr:s:twz:N:" opt;do
+while getopts ":a:bc:de:hilm:M:n:o:p:qr:s:u:wz:N:" opt;do
     case $opt in
     a)
         AGENT_CONTAINER="${OPTARG}"
@@ -135,7 +135,10 @@ while getopts ":a:bc:de:hilm:M:n:o:p:qr:s:twz:N:" opt;do
         SERVER_CONTAINER="${OPTARG}"
         ;;
     t)
-        DOCKER_URL="https://test.docker.com/"
+        echo "-t option deprecated. Use -u https://test.docker.com"
+        ;;
+    u)
+        DOCKER_URL="${OPTARG}"
         ;;
     w)
         echo "-w Deprecated... now default behavior"
