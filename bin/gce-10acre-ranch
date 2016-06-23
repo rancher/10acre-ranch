@@ -29,7 +29,7 @@ gce-10acre-ranch Usage:
     -l - List nodes or clusters if no -c is passed
     -m - Master Machine type (g1-small default)
     -M - Node Machine type (g1-small default)
-    -n - Number of nodes [defaults to 3]
+    -n - Number of nodes [defaults to 1]
     -N - Network [default is default]
     -o - OS image
            centos-6 (Servers only. Configuration is manual)
