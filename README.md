@@ -1,11 +1,17 @@
-## Wrapper to deploy Rancher on Google Compute Engine
-=====
-Prerequisites:
+# Wrapper to deploy Rancher on Google Compute Engine or Docker for Mac
+
+These scripts bootstrap a Rancher server and register one or more host node VMs to it.
+
+- [Google Compute Engine](#google-compute-engine)
+- [Docker for Mac Beta](#docker-for-mac-beta)
+
+## Google Compute Engine
+
+### Prerequisites
 
 - Google Cloud SDK - [SDK](https://cloud.google.com/sdk/)
 
-=========
-Usage:
+### Usage:
 ```
     gce-10acre-ranch [opts]
     -a - Agent Container:
@@ -42,7 +48,7 @@ Usage:
     -z - Zone [us-central1-f default]
 ```
 
-## If you are using this outside of Rancher Labs
+### If you are using this outside of Rancher Labs
 
 Set the GCE Project via environment variable: ```GCE_PROJECT="<project>"```
 
@@ -75,13 +81,13 @@ For more customizations/testing capabilities you can sepecify the Docker images 
 
 ```
 Server
-./gce-10acre-ranch -c <clustername> -n <number of nodes> -s rancher/server:development
+./gce-10acre-ranch -c <clustername> -n <number of nodes> -s rancher/server:vX.Y.Z
 
 Agent
-./gce-10acre-ranch -c <clustername> -n <number of nodes> -a <user>/agent:development
+./gce-10acre-ranch -c <clustername> -n <number of nodes> -a <user>/agent:vX.Y.Z
 
 Or both
-./gce-10acre-ranch -c <clustername> -n <number of nodes> -a <user>/agent:development -s <user>/dev-server
+./gce-10acre-ranch -c <clustername> -n <number of nodes> -a <user>/agent:vX.Y.Z -s <user>/dev-server
 ```
 The Docker images must be real and accessible to Docker.
 
@@ -110,13 +116,64 @@ You can hit this IP over port 8080 to get to the UI
 ./gce-10acre-ranch -c <cluster name> -d (-q)
 ```
 
+------
+## Docker for Mac Beta
+
+### Prerequisites
+
+- Docker for Mac (http://beta.docker.com)
+- docker-machine-driver-xhyve (https://github.com/zchee/docker-machine-driver-xhyve)
+
+### Usage
+```
+mac-ranch Usage:
+    mac-ranch [opts]
+    -c - Create world
+    -d - Destroy world
+    -h - Print this message
+    -l - List hosts
+    -r registration_url - Register another "-n" hosts using the given registration url
+
+    -M - Host memory in MB (default: 512)
+    -n - Number of hosts (default: 3)
+    -p - privileged (needed for build-master)
+    -s - Server Container (default: rancher/server:latest)
+            needs full container repo/name[:tag]
+```
+
+### To deploy:
+
+```
+./mac-ranch -c -n <number of hosts>
+```
+
+#### A specific release
+```
+./mac-ranch -c -n <number of hosts> -s rancher/server:vX.Y.Z
+```
+
+#### A build-master
+```
+./mac-ranch -c -n <number of hosts> -p -s rancher/build-master
+```
+
+### List all the hosts
+```
+./mac-ranch -l
+```
+
+### Destroy the cluster
+```
+./mac-ranch -d
+```
+
 ### Contact
 For bugs, questions, comments, corrections, suggestions, etc., open an issue in [rancher/rancher](//github.com/rancher/rancher/issues) with a title starting with `[10acre-ranch] `.
 
 Or just [click here](//github.com/rancher/rancher/issues/new?title=%5B10acre-ranch%5D%20) to create a new issue.
 
 # License
-Copyright (c) 2014-2015 [Rancher Labs, Inc.](http://rancher.com)
+Copyright (c) 2014-2016 [Rancher Labs, Inc.](http://rancher.com)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -129,4 +186,3 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-
