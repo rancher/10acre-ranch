@@ -16,7 +16,7 @@ These scripts bootstrap a Rancher server and register one or more host node VMs 
     gce-10acre-ranch [opts]
     -a - Agent Container:
             needs full container repo/name[:tag]
-    -c - Cluster name[Required]
+    -c - Cluster name [Required]
     -d - DELETE ALL NODES
     -e - External IP for master...(yes this is getting rediculous)
     -h - Print this message
@@ -122,6 +122,9 @@ You can hit this IP over port 8080 to get to the UI
 ### Prerequisites
 
 - Docker for Mac (http://beta.docker.com)
+
+For additional hosts beyond the Docker for Mac VM:
+
 - docker-machine-driver-xhyve (https://github.com/zchee/docker-machine-driver-xhyve)
 
 ### Usage
@@ -134,27 +137,35 @@ mac-ranch Usage:
     -l - List hosts
     -r registration_url - Register another "-n" hosts using the given registration url
 
-    -M - Host memory in MB (default: 512)
-    -n - Number of hosts (default: 3)
+    -b - Boot2Docker URL (default: the one for v1.11.2)
+    -i - No Inception - Prevent registering the Docker for Mac VM as a host
+    -M - Host memory in mb (default: 1024)
+    -n - Number of hosts (default: 0)
     -p - privileged (needed for build-master)
     -s - Server Container (default: rancher/server:latest)
-            needs full container repo/name[:tag]
+            needs full container repo/name[:tag] 
+    -u - Registry mirror URL (default: none)
 ```
 
-### To deploy:
+### To deploy (single host):
 
 ```
-./mac-ranch -c -n <number of hosts>
+./mac-ranch -c
 ```
 
 #### A specific release
 ```
-./mac-ranch -c -n <number of hosts> -s rancher/server:vX.Y.Z
+./mac-ranch -c -s rancher/server:vX.Y.Z
 ```
 
 #### A build-master
 ```
-./mac-ranch -c -n <number of hosts> -p -s rancher/build-master
+./mac-ranch -c -p -s rancher/build-master
+```
+
+#### Multiple hosts
+```
+./mac-ranch -c -n <number of additional hosts>
 ```
 
 ### List all the hosts
@@ -162,7 +173,7 @@ mac-ranch Usage:
 ./mac-ranch -l
 ```
 
-### Destroy the cluster
+### Destroy everything
 ```
 ./mac-ranch -d
 ```
