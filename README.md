@@ -140,7 +140,7 @@ mac-ranch Usage:
 
     -b - Boot2Docker URL (default: the one for v1.11.2)
     -M - Host memory in mb (default: 1024)
-    -n - Number of hosts, not including the "inception" Docker for Mac VM (see -v) (default: 0)
+    -n - Number of hosts (default: 0)
     -p - privileged (needed for build-master)
     -s - Server Container (default: rancher/server:latest)
             needs full container repo/name[:tag] 
