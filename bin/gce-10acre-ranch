@@ -56,8 +56,10 @@ EOF
 
 WAIT=true
 INSTANCE_COUNT=1
-OS_FAMILY=ubuntu-15-10
-DOCKER_URL="https://releases.rancher.com/install-docker/1.10.3.sh"
+OS_FAMILY=ubuntu-1604-lts
+OS_IMAGE_PROJECT=ubuntu-os-cloud
+#DOCKER_URL="https://releases.rancher.com/install-docker/1.10.3.sh"
+DOCKER_URL="https://get.docker.com"
 MASTER_MACHINE_TYPE="g1-small"
 NODE_MACHINE_TYPE="g1-small"
 ZONE="us-central1-f"
@@ -194,41 +196,32 @@ get_master_ip()
     echo $IP
 }
 
-get_os_image()
+get_os_project()
 {
-    local image
+    local project 
 
     # Has to be a better more dynamic way...that also isn't slow.
     case $OS_FAMILY in
-        *-rancher-base)
-            image="https://www.googleapis.com/compute/v1/projects/rancher-dev/global/images/${OS_FAMILY}"
-            ;;
         ubuntu*)
-            image="https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/${OS_FAMILY}"
+            project="ubuntu-os-cloud"
             ;;
-        coreos-*)
-            image="https://www.googleapis.com/compute/v1/projects/coreos-cloud/global/images/${OS_FAMILY}"
+        *-rancher-base)
+            project="rancher-dev"
             ;;
-        "coreos")
-            image="coreos"
+        coreos*)
+            project="coreos-cloud"
             ;;
-        "centos-6")
-            image="centos-6"
+        centos-*)
+            project="centos-cloud"
             ;;
-        "centos-7")
-            image="centos-7"
+        rhel-*)
+            project="rhel-cloud"
             ;;
-        "rhel-6")
-            image="rhel-6"
+        debian-*)
+            project="debian-cloud"
             ;;
-        "rhel-7")
-            image="rhel-7"
-            ;;
-        "debian-7-backports")
-            image="debian-7-backports"
-            ;;
-        "fedora-21")
-            image="fedora-cloud-base-21-20141217"
+        fedora-21)
+            project="fedora-cloud-base-21-20141217"
             ;;
         *)
             echo "Invalid OS Selection: $OS_FAMILY" 1>&2
@@ -236,7 +229,7 @@ get_os_image()
             ;;
     esac
 
-    echo "${image}"
+    echo "${project}"
 
 }
 
@@ -274,7 +267,8 @@ gcloud_create()
         --metadata-from-file ${metadata_key}=${2}
         --maintenance-policy MIGRATE
         --scopes https://www.googleapis.com/auth/devstorage.read_only
-        --image $(get_os_image)
+        --image-project $(get_os_project)
+        --image-family ${OS_FAMILY}
         --tags ${3} "
 
     if [ ! -z ${4} ]; then
