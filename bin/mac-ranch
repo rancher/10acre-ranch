@@ -20,17 +20,18 @@ mac-ranch Usage:
     -c - Create world
     -d - Destroy world
     -h - Print this message
+    -i - Print IP of Docker for Mac VM
     -l - List hosts
     -r registration_url - Register another "-n" hosts using the given registration url
 
     -b - Boot2Docker URL (default: the one for v1.11.2)
-    -i - No Inception - Prevent registering the Docker for Mac VM as a host
     -M - Host memory in mb (default: 1024)
     -n - Number of hosts (default: 0)
     -p - privileged (needed for build-master)
     -s - Server Container (default: rancher/server:latest)
             needs full container repo/name[:tag] 
     -u - Registry mirror URL (default: none)
+    -v - No Inception - Prevent registering the Docker for Mac VM as a host
 EOF
 }
 
@@ -43,7 +44,7 @@ NODE_MACHINE_SIZE="1024"
 NODE_PREFIX="dm-"
 MIRROR_URL=""
 
-while getopts ":a:b:cdhilM:n:pr:s:u:" opt;do
+while getopts ":a:b:cdhilM:n:pr:s:u:v" opt;do
     case $opt in
     a)
         AGENT_CONTAINER="${OPTARG}"
@@ -62,7 +63,7 @@ while getopts ":a:b:cdhilM:n:pr:s:u:" opt;do
         exit 1
         ;;
     i)
-        INCEPTION="false"
+        SHOW_IP_FLAG="true"
         ;;
     l)
         LIST_NODES_FLAG="true"
@@ -84,6 +85,9 @@ while getopts ":a:b:cdhilM:n:pr:s:u:" opt;do
         ;;
     u)
         MIRROR_URL="${OPTARG}"
+        ;;
+    v)
+        INCEPTION="false"
         ;;
     \?)
         echo "Invalid arguemnts" >&2
@@ -209,6 +213,8 @@ main()
 {
     if [[ "${LIST_NODES_FLAG}" = "true" ]]; then
         list_nodes
+    elif [[ "${SHOW_IP_FLAG}" = "true" ]]; then
+        get_master_ip
     elif [[ "${DELETE_NODES_FLAG}" = "true" ]]; then
         delete_nodes
     elif [[ "${CREATE_NODES_FLAG}" = "true" || "${REGISTRATION_URL}" ]]; then
