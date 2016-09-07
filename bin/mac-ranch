@@ -183,7 +183,7 @@ build_compute()
     fi
 
     if [[ "${INCEPTION}" = "true" ]]; then
-      docker run --name=rancher-agent-bootstrap -e CATTLE_AGENT_IP="$(get_master_ip)" $(echo $(get_run_cmd)|sed 's/^sudo docker run//'|sed 's/-v \/var\/lib\/rancher:\/var\/lib\/rancher//')
+      docker run --name=rancher-agent-bootstrap -e CATTLE_AGENT_IP="127.0.0.1" $(echo $(get_run_cmd)|sed 's/^sudo docker run//'|sed 's/-v \/var\/lib\/rancher:\/var\/lib\/rancher//')
     fi
 
     if [ "${INSTANCE_COUNT}" -gt "0" ]; then
