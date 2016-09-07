@@ -20,28 +20,31 @@ mac-ranch Usage:
     -c - Create world
     -d - Destroy world
     -h - Print this message
+    -i - Print IP of Docker for Mac VM
     -l - List hosts
     -r registration_url - Register another "-n" hosts using the given registration url
 
-    -b - boot2docker URL (default: the one for v1.11.2)
-    -M - Host memory in mb (default: 512)
-    -n - Number of hosts (default: 3)
+    -b - Boot2Docker URL (default: the one for v1.11.2)
+    -M - Host memory in mb (default: 1024)
+    -n - Number of hosts, not including the "inception" Docker for Mac VM (see -v) (default: 0)
     -p - privileged (needed for build-master)
     -s - Server Container (default: rancher/server:latest)
             needs full container repo/name[:tag] 
     -u - Registry mirror URL (default: none)
+    -v - No Inception - Prevent registering the Docker for Mac VM as a host
 EOF
 }
 
 BOOT2DOCKER="https://github.com/boot2docker/boot2docker/releases/download/v1.11.2/boot2docker.iso"
 AGENT_CONTAINER="rancher/agent:latest"
 SERVER_CONTAINER="rancher/server:latest"
-INSTANCE_COUNT=3
-NODE_MACHINE_SIZE="512"
-NODE_PREFIX="dm-host-"
+INSTANCE_COUNT=0
+INCEPTION="true"
+NODE_MACHINE_SIZE="1024"
+NODE_PREFIX="dm-"
 MIRROR_URL=""
 
-while getopts ":a:b:cdhlM:n:pr:s:u:" opt;do
+while getopts ":a:b:cdhilM:n:pr:s:u:v" opt;do
     case $opt in
     a)
         AGENT_CONTAINER="${OPTARG}"
@@ -58,6 +61,9 @@ while getopts ":a:b:cdhlM:n:pr:s:u:" opt;do
     h)
         print_help
         exit 1
+        ;;
+    i)
+        SHOW_IP_FLAG="true"
         ;;
     l)
         LIST_NODES_FLAG="true"
@@ -79,6 +85,9 @@ while getopts ":a:b:cdhlM:n:pr:s:u:" opt;do
         ;;
     u)
         MIRROR_URL="${OPTARG}"
+        ;;
+    v)
+        INCEPTION="false"
         ;;
     \?)
         echo "Invalid arguemnts" >&2
@@ -112,7 +121,7 @@ delete_nodes()
     nodes=$(list_node_names)
 
     if docker inspect mac-ranch >/dev/null 2>&1; then
-      docker rm -f mac-ranch
+      docker rm -f mac-ranch rancher-agent-bootstrap rancher-agent rancher-agent-state
     fi
 
     if [[ "${nodes}" ]]; then
@@ -122,7 +131,8 @@ delete_nodes()
 
 get_master_ip()
 {
-    echo "192.168.64.1"
+  echo "192.168.64.1"
+  # docker run --rm --net=host -it busybox ip addr show eth0 | grep inet | awk '{print $2}' | awk -F '/' '{print $1}'
 }
 
 create_reg_tokens() # Signature: rancher_server_ip
@@ -163,19 +173,24 @@ build_compute()
 
     ip_cmd="\$(ifconfig eth0 | grep 'inet ' | awk -F'[: ]+' '{ print \$4 }')"
     registration_cmd="docker run -e CATTLE_AGENT_IP=\"${ip_cmd}\" $(echo $(get_run_cmd)|sed 's/^sudo docker run//')"
-    echo "${registration_cmd}"
 
     mirror=""
     if [[ "${MIRROR_URL}" ]]; then
       mirror="--engine-registry-mirror=${MIRROR_URL}"
     fi
 
-    offset=$(list_node_names|wc -l)
-    for i in $(seq $((${offset} + 1)) $((${offset} + ${INSTANCE_COUNT}))); do
-        name="${NODE_PREFIX}${i}"
-        docker-machine create --driver=xhyve --xhyve-boot2docker-url="${BOOT2DOCKER}" --xhyve-memory-size="${NODE_MACHINE_SIZE}" --xhyve-boot-cmd="loglevel=3 user=docker console=ttyS0 console=tty0 noembed nomodeset norestore waitusb=10 base host=${name}" ${mirror} ${name}
-        docker-machine ssh ${name} ${registration_cmd}
-    done
+    if [[ "${INCEPTION}" = "true" ]]; then
+      docker run --name=rancher-agent-bootstrap -e CATTLE_AGENT_IP="127.0.0.1" $(echo $(get_run_cmd)|sed 's/^sudo docker run//'|sed 's/-v \/var\/lib\/rancher:\/var\/lib\/rancher//')
+    fi
+
+    if [ "${INSTANCE_COUNT}" -gt "0" ]; then
+      offset=$(list_node_names|wc -l)
+      for i in $(seq $((${offset} + 1)) $((${offset} + ${INSTANCE_COUNT}))); do
+          name="${NODE_PREFIX}${i}"
+          docker-machine create --driver=xhyve --xhyve-boot2docker-url="${BOOT2DOCKER}" --xhyve-memory-size="${NODE_MACHINE_SIZE}" --xhyve-boot-cmd="loglevel=3 user=docker console=ttyS0 console=tty0 noembed nomodeset norestore waitusb=10 base host=${name}" ${mirror} ${name}
+          docker-machine ssh ${name} ${registration_cmd}
+      done
+    fi
 }
 
 build_cluster()
@@ -191,15 +206,16 @@ build_cluster()
             echo -n "."
         done
     fi
-    if [ "${INSTANCE_COUNT}" -gt "0" ]; then
-        build_compute
-    fi
+
+    build_compute
 }
 
 main()
 {
     if [[ "${LIST_NODES_FLAG}" = "true" ]]; then
         list_nodes
+    elif [[ "${SHOW_IP_FLAG}" = "true" ]]; then
+        get_master_ip
     elif [[ "${DELETE_NODES_FLAG}" = "true" ]]; then
         delete_nodes
     elif [[ "${CREATE_NODES_FLAG}" = "true" || "${REGISTRATION_URL}" ]]; then
