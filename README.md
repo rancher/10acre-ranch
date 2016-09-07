@@ -134,17 +134,18 @@ mac-ranch Usage:
     -c - Create world
     -d - Destroy world
     -h - Print this message
+    -i - Print IP of Docker for Mac VM
     -l - List hosts
     -r registration_url - Register another "-n" hosts using the given registration url
 
     -b - Boot2Docker URL (default: the one for v1.11.2)
-    -i - No Inception - Prevent registering the Docker for Mac VM as a host
     -M - Host memory in mb (default: 1024)
-    -n - Number of hosts (default: 0)
+    -n - Number of hosts, not including the "inception" Docker for Mac VM (see -v) (default: 0)
     -p - privileged (needed for build-master)
     -s - Server Container (default: rancher/server:latest)
             needs full container repo/name[:tag] 
     -u - Registry mirror URL (default: none)
+    -v - No Inception - Prevent registering the Docker for Mac VM as a host
 ```
 
 ### To deploy (single host):
@@ -158,9 +159,9 @@ mac-ranch Usage:
 ./mac-ranch -c -s rancher/server:vX.Y.Z
 ```
 
-#### A build-master
+#### Build from master
 ```
-./mac-ranch -c -p -s rancher/build-master
+./mac-ranch -c -p -s rancher/server:master
 ```
 
 #### Multiple hosts
@@ -168,7 +169,7 @@ mac-ranch Usage:
 ./mac-ranch -c -n <number of additional hosts>
 ```
 
-### List all the hosts
+### List all the (external) hosts
 ```
 ./mac-ranch -l
 ```

@@ -26,7 +26,7 @@ mac-ranch Usage:
 
     -b - Boot2Docker URL (default: the one for v1.11.2)
     -M - Host memory in mb (default: 1024)
-    -n - Number of hosts (default: 0)
+    -n - Number of hosts, not including the "inception" Docker for Mac VM (see -v) (default: 0)
     -p - privileged (needed for build-master)
     -s - Server Container (default: rancher/server:latest)
             needs full container repo/name[:tag] 
@@ -131,7 +131,8 @@ delete_nodes()
 
 get_master_ip()
 {
-  docker run --rm --net=host -it busybox ip addr show eth0 | grep inet | awk '{print $2}' | awk -F '/' '{print $1}'
+  echo "192.168.64.1"
+  # docker run --rm --net=host -it busybox ip addr show eth0 | grep inet | awk '{print $2}' | awk -F '/' '{print $1}'
 }
 
 create_reg_tokens() # Signature: rancher_server_ip
@@ -179,7 +180,7 @@ build_compute()
     fi
 
     if [[ "${INCEPTION}" = "true" ]]; then
-      docker run --name=rancher-agent-bootstrap -e CATTLE_AGENT_IP="$(get_master_ip)" $(echo $(get_run_cmd)|sed 's/^sudo docker run//'|sed 's/-v \/var\/lib\/rancher:\/var\/lib\/rancher//')
+      docker run --name=rancher-agent-bootstrap -e CATTLE_AGENT_IP="127.0.0.1" $(echo $(get_run_cmd)|sed 's/^sudo docker run//'|sed 's/-v \/var\/lib\/rancher:\/var\/lib\/rancher//')
     fi
 
     if [ "${INSTANCE_COUNT}" -gt "0" ]; then
