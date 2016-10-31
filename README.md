@@ -18,7 +18,7 @@ These scripts bootstrap a Rancher server and register one or more host node VMs 
             needs full container repo/name[:tag]
     -c - Cluster name [Required]
     -d - DELETE ALL NODES
-    -e - External IP for master...(yes this is getting rediculous)
+    -e - External IP for master...(yes this is getting ridiculous)
     -h - Print this message
     -i - Show the IP address of the master
     -l - List nodes or clusters if no -c is passed
