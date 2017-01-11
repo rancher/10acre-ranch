@@ -21,6 +21,7 @@ gce-10acre-ranch Usage:
     gce-10acre-ranch [opts] 
     -a - Agent Container:
             needs full container repo/name[:tag]
+    -b - Boot disk size in GB (40 default)
     -c - Cluster name[Required]
     -d - DELETE ALL NODES
     -e - External IP for master...(yes this is getting rediculous)
@@ -64,14 +65,15 @@ MASTER_MACHINE_TYPE="g1-small"
 NODE_MACHINE_TYPE="g1-small"
 ZONE="us-central1-f"
 NETWORK="default"
+DISK_SIZE=40
 
-while getopts ":a:bc:de:hilm:M:n:o:p:qr:s:u:wz:N:" opt;do
+while getopts ":a:b:c:de:hilm:M:n:o:p:qr:s:u:wz:N:" opt;do
     case $opt in
     a)
         AGENT_CONTAINER="${OPTARG}"
         ;;
     b)
-        echo "-b option deprecated. No longer needed"
+        DISK_SIZE=${OPTARG}
         ;;
     c)
         # Add 10acre so that you can't accidentally list/delete lots of hosts easily.
@@ -252,6 +254,7 @@ gcloud_create()
     # 3 - GCE tags
     # 4 - Master IP Address
     # 5 - Machine Type
+    # 6 - Boot disk size (gb)
 
     local metadata_key=startup-script
     local gcloud_args
@@ -262,6 +265,7 @@ gcloud_create()
 
     gcloud_args="--zone ${ZONE}
         --machine-type ${5}
+        --boot-disk-size=${DISK_SIZE}GB
         --network ${NETWORK}
         --project ${GCE_PROJECT}
         --metadata-from-file ${metadata_key}=${2}
@@ -339,7 +343,7 @@ generate_build_script() # signature: role container build_file
         master)
             default_container="rancher/server"
 
-            docker_opts=('"run"', '"-d"', '"-p"', '"8080:8080"');
+            docker_opts=('"run"', '"-d"', '"-p"', '"8080:8080"','"-e"', '"DEFAULT_CATTLE_TELEMETRY_OPT=out"');
             docker_cmd=
 
             if [[ "${PRIVILEGED_MASTER}" = "true" ]]; then
