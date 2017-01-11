@@ -3,228 +3,284 @@
 set -e 
 
 which docker >/dev/null 2>&1 || {
-    echo "docker command not found." 1>&2
-    exit 1
+  echo "docker command not found." 1>&2
+  exit 1
 }
 
 which docker-machine-driver-xhyve >/dev/null 2>&1 || {
-    echo "docker-machine-driver-xhyve command not found." 1>&2
-    exit 1
+  echo "docker-machine-driver-xhyve command not found." 1>&2
+  exit 1
 }
 
 print_help()
 {
-    cat 1>&2 <<EOF
+  cat 1>&2 <<EOF
 mac-ranch Usage:
-    mac-ranch [opts]
-    -c - Create world
-    -d - Destroy world
-    -h - Print this message
-    -i - Print IP of Docker for Mac VM
-    -l - List hosts
-    -r registration_url - Register another "-n" hosts using the given registration url
+  mac-ranch [opts]
+  -c - Create world
+  -d - Destroy world
+  -h - Print this message
+  -i - Print IP of server VM
+  -l - List hosts
+  -r registration_url - Register another "-n" hosts using the given registration url
 
-    -b - Boot2Docker URL (default: the one for v1.11.2)
-    -M - Host memory in mb (default: 1024)
-    -n - Number of hosts, not including the "inception" Docker for Mac VM (see -v) (default: 0)
-    -p - privileged (needed for build-master)
-    -s - Server Container (default: rancher/server:latest)
-            needs full container repo/name[:tag] 
-    -u - Registry mirror URL (default: none)
-    -v - No Inception - Prevent registering the Docker for Mac VM as a host
+  -b - Boot2Docker URL (default: the one for v1.12.3)
+  -M - Host memory in mb (default: 1024)
+  -m - Server memory in mb (default: 2048)
+  -n - Number of hosts (default: 2)
+  -p - privileged (needed for build-master)
+  -s - Server Container (default: rancher/server:latest)
+       needs full container repo/name[:tag] 
+  -u - Registry mirror URL (default: none)
 EOF
 }
 
-BOOT2DOCKER="https://github.com/boot2docker/boot2docker/releases/download/v1.11.2/boot2docker.iso"
-AGENT_CONTAINER="rancher/agent:latest"
-SERVER_CONTAINER="rancher/server:latest"
-INSTANCE_COUNT=0
-INCEPTION="true"
-NODE_MACHINE_SIZE="1024"
-NODE_PREFIX="dm-"
+SERVER_NAME="rs"
+SERVER_IMAGE="rancher/server:latest"
+SERVER_MACHINE_SIZE="2048"
+BOOT2DOCKER="https://github.com/boot2docker/boot2docker/releases/download/v1.12.3/boot2docker.iso"
+BOOT_ARGS="loglevel=3 user=docker console=ttyS0 console=tty0 noembed nomodeset norestore waitusb=10 base"
+HOST_PREFIX="${SERVER_NAME}-host"
+HOST_COUNT=2
+HOST_MACHINE_SIZE="1024"
 MIRROR_URL=""
+PULL_IMAGES=("hello-world" "nginx" "busybox" "ubuntu" "vincent99/curl" "cloudnautique/hello-world")
 
-while getopts ":a:b:cdhilM:n:pr:s:u:v" opt;do
-    case $opt in
-    a)
-        AGENT_CONTAINER="${OPTARG}"
-        ;;
-    b)
-        BOOT2DOCKER="${OPTARG}"
-        ;;
-    c)
-        CREATE_NODES_FLAG="true"
-        ;;
-    d)
-        DELETE_NODES_FLAG="true"
-        ;;
-    h)
-        print_help
-        exit 1
-        ;;
-    i)
-        SHOW_IP_FLAG="true"
-        ;;
-    l)
-        LIST_NODES_FLAG="true"
-        ;;
-    M)
-        NODE_MACHINE_SIZE=${OPTARG}
-        ;;
-    n)
-        INSTANCE_COUNT=${OPTARG}
-        ;;
-    p)
-        PRIVILEGED_MASTER="true"
-        ;;
-    r)
-        REGISTRATION_URL="${OPTARG}"
-        ;;
-    s)
-        SERVER_CONTAINER="${OPTARG}"
-        ;;
-    u)
-        MIRROR_URL="${OPTARG}"
-        ;;
-    v)
-        INCEPTION="false"
-        ;;
-    \?)
-        echo "Invalid arguemnts" >&2
-        print_help
-        exit 1
-        ;;
-    :)
-        echo "Option -${OPTARG} requires arguement." >&2
-        print_help
-        exit 1
-        ;;
-    esac
+while getopts ":b:cdhilM:m:n:pr:s:u:" opt;do
+  case $opt in
+  b)
+    BOOT2DOCKER="${OPTARG}"
+    ;;
+  c)
+    CREATE_FLAG="true"
+    ;;
+  d)
+    DELETE_FLAG="true"
+    ;;
+  h)
+    print_help
+    exit 1
+    ;;
+  i)
+    SHOW_IP_FLAG="true"
+    ;;
+  l)
+    LIST_HOSTS_FLAG="true"
+    ;;
+  M)
+    HOST_MACHINE_SIZE=${OPTARG}
+    ;;
+  M)
+    SERVER_MACHINE_SIZE=${OPTARG}
+    ;;
+  n)
+    HOST_COUNT=${OPTARG}
+    ;;
+  p)
+    PRIVILEGED_MASTER="true"
+    ;;
+  r)
+    REGISTRATION_URL="${OPTARG}"
+    ;;
+  s)
+    SERVER_IMAGE="${OPTARG}"
+    ;;
+  u)
+    MIRROR_URL="${OPTARG}"
+    ;;
+  \?)
+    echo "Invalid arguemnts" >&2
+    print_help
+    exit 1
+    ;;
+  :)
+    echo "Option -${OPTARG} requires arguement." >&2
+    print_help
+    exit 1
+    ;;
+  esac
 done
 shift $((OPTIND-1))
 
-list_nodes()
+list_hosts()
 {
-    docker-machine ls | grep "^${NODE_PREFIX}"
+  docker-machine ls | grep "^${HOST_PREFIX}"
 }
 
-list_node_names()
+list_host_names()
 {
-    (docker-machine ls -q | grep "^${NODE_PREFIX}") || echo -n ""
+  (docker-machine ls -q | grep "^${HOST_PREFIX}") || echo -n ""
 }
 
-delete_nodes()
+delete_cluster()
 {
-    local opts
-    local nodes
+  local hosts
+  local server
 
-    nodes=$(list_node_names)
+  hosts=$(list_host_names)
+  server=""
 
-    if docker inspect mac-ranch >/dev/null 2>&1; then
-      docker rm -f mac-ranch rancher-agent-bootstrap rancher-agent rancher-agent-state
-    fi
+  if docker-machine ip ${SERVER_NAME} >/dev/null 2>&1; then
+    server="${SERVER_NAME}"
+  fi
 
-    if [[ "${nodes}" ]]; then
-      docker-machine rm -y ${nodes}
-    fi
+  if [[ "${hosts}${server}" ]]; then
+    docker-machine rm -y ${hosts} ${server}
+  fi
 }
 
-get_master_ip()
+get_server_ip()
 {
-  echo "192.168.64.1"
-  # docker run --rm --net=host -it busybox ip addr show eth0 | grep inet | awk '{print $2}' | awk -F '/' '{print $1}'
+  echo $(docker-machine ip ${SERVER_NAME})
 }
 
 create_reg_tokens() # Signature: rancher_server_ip
 {
-    project_id=$(curl -s -X GET http://localhost:8080/v1/projects|python -c'import json,sys;print(json.load(sys.stdin)["data"][0]["id"])')
-    echo $(curl -s -X POST http://localhost:8080/v1/projects/${project_id}/registrationtokens|python -c'import json,sys; print(json.load(sys.stdin)["links"]["self"])')
+  server_ip=$(get_server_ip)
+  project_id=$(curl -s -X GET http://${server_ip}:8080/v1/projects|python -c'import json,sys;print(json.load(sys.stdin)["data"][0]["id"])')
+  echo $(curl -s -X POST http://${server_ip}:8080/v1/projects/${project_id}/registrationtokens|python -c'import json,sys; print(json.load(sys.stdin)["links"]["self"])')
 }
 
 get_reg_url()
 {
-    ## This is a bit hacky...
-    local reg_tokens_link
-    reg_tokens_link=$(create_reg_tokens)
-    sleep 1
-    echo $(curl -s -X GET $reg_tokens_link|python -c'import json,sys; print(json.load(sys.stdin)["registrationUrl"])')
+  ## This is a bit hacky...
+  local reg_tokens_link
+  reg_tokens_link=$(create_reg_tokens)
+  sleep 1
+  echo $(curl -s -X GET $reg_tokens_link|python -c'import json,sys; print(json.load(sys.stdin)["registrationUrl"])')
 }
 
 get_run_cmd()
 {
-    reg_tokens_link=$(create_reg_tokens)
-    sleep 1
-    echo $(curl -s -X GET $reg_tokens_link|python -c'import json,sys; print(json.load(sys.stdin)["command"])')
+  reg_tokens_link=$(create_reg_tokens)
+  sleep 1
+  echo $(curl -s -X GET $reg_tokens_link|python -c'import json,sys; print(json.load(sys.stdin)["command"])')
 }
 
 build_master()
 {
-    privileged=""
-    if [[ "${PRIVILEGED_MASTER}" = "true" ]]; then
-        privileged="--privileged"
-    fi
+  privileged=""
+  if [[ "${PRIVILEGED_MASTER}" = "true" ]]; then
+    privileged="--privileged"
+  fi
 
-    docker run -d --restart=always -p 8080:8080 ${privileged} --name=mac-ranch -e DEFAULT_CATTLE_API_HOST="$(get_master_ip):8080" ${SERVER_CONTAINER}
+  mirror=""
+  if [[ "${MIRROR_URL}" ]]; then
+    mirror="--engine-registry-mirror=${MIRROR_URL}"
+  fi
+
+  docker-machine create \
+    --driver=xhyve \
+    --xhyve-boot2docker-url="${BOOT2DOCKER}" \
+    --xhyve-memory-size="${SERVER_MACHINE_SIZE}" \
+    --xhyve-boot-cmd="${BOOT_ARGS} host=${name}" \
+    ${mirror} ${SERVER_NAME}
+
+  docker-machine ssh ${SERVER_NAME} docker run -d \
+    --restart=unless-stopped \
+    -p 8080:8080 ${privileged} \
+    --name=rancher-server \
+    -e DEFAULT_CATTLE_API_HOST="$(get_server_ip):8080" \
+    ${SERVER_IMAGE}
 }
 
-build_compute()
+build_hosts()
 {
-    local name
+  local name
+  local offset
+  local first_offset
 
-    ip_cmd="\$(ifconfig eth0 | grep 'inet ' | awk -F'[: ]+' '{ print \$4 }')"
-    registration_cmd="docker run -e CATTLE_AGENT_IP=\"${ip_cmd}\" $(echo $(get_run_cmd)|sed 's/^sudo docker run//')"
+  mirror=""
+  if [[ "${MIRROR_URL}" ]]; then
+    mirror="--engine-registry-mirror=${MIRROR_URL}"
+  fi
 
-    mirror=""
-    if [[ "${MIRROR_URL}" ]]; then
-      mirror="--engine-registry-mirror=${MIRROR_URL}"
-    fi
+  if [ "${HOST_COUNT}" -gt "0" ]; then
+    offset=$(list_host_names|wc -l)
+    first_offset=$offset
+    for i in $(seq $((${offset} + 1)) $((${offset} + ${HOST_COUNT}))); do
+      name="${HOST_PREFIX}${i}"
+      echo "Creating ${name}"
+      docker-machine create \
+        --driver=xhyve \
+        --xhyve-boot2docker-url="${BOOT2DOCKER}" \
+        --xhyve-memory-size="${HOST_MACHINE_SIZE}" \
+        --xhyve-boot-cmd="${BOOT_ARGS} host=${name}" ${mirror} ${name}
+    done
+  fi
 
-    if [[ "${INCEPTION}" = "true" ]]; then
-      docker run --name=rancher-agent-bootstrap -e CATTLE_AGENT_IP="127.0.0.1" $(echo $(get_run_cmd)|sed 's/^sudo docker run//'|sed 's/-v \/var\/lib\/rancher:\/var\/lib\/rancher//')
-    fi
+  echo $first_offset
+}
 
-    if [ "${INSTANCE_COUNT}" -gt "0" ]; then
-      offset=$(list_node_names|wc -l)
-      for i in $(seq $((${offset} + 1)) $((${offset} + ${INSTANCE_COUNT}))); do
-          name="${NODE_PREFIX}${i}"
-          docker-machine create --driver=xhyve --xhyve-boot2docker-url="${BOOT2DOCKER}" --xhyve-memory-size="${NODE_MACHINE_SIZE}" --xhyve-boot-cmd="loglevel=3 user=docker console=ttyS0 console=tty0 noembed nomodeset norestore waitusb=10 base host=${name}" ${mirror} ${name}
-          docker-machine ssh ${name} ${registration_cmd}
+register_hosts()
+{
+  local name
+  local offset
+  local ip_cmd
+  local registration_cmd
+
+  offset=$1
+  ip_cmd="\$(ifconfig eth0 | grep 'inet ' | awk -F'[: ]+' '{ print \$4 }')"
+  registration_cmd="docker run -e CATTLE_AGENT_IP=\"${ip_cmd}\" $(echo $(get_run_cmd)|sed 's/^sudo docker run//')"
+
+  if [ "${HOST_COUNT}" -gt "0" ]; then
+    for i in $(seq $((${offset} + 1)) $((${offset} + ${HOST_COUNT}))); do
+      name="${HOST_PREFIX}${i}"
+      echo "Registering ${name}"
+      docker-machine ssh ${name} ${registration_cmd}
+      for j in "${PULL_IMAGES[@]}"; do
+        echo "Pulling images for ${name}"
+        docker-machine ssh ${name} docker pull "${j}"
       done
+    done
+  fi
+}
+
+wait_for_server()
+{
+  echo -n "Waiting for server to start "
+  server_ip=$(get_server_ip)
+  while sleep 5; do
+    if [ "$(curl -s http://${server_ip}:8080/ping)" = "pong" ]; then
+      echo Success
+      break
     fi
+    echo -n "."
+  done
 }
 
 build_cluster()
 {
-    if [ -z "${REGISTRATION_URL}" ]; then
-        build_master
-        echo -n "Waiting for server to start "
-        while sleep 5; do
-            if [ "$(curl -s http://localhost:8080/ping)" = "pong" ]; then
-                echo Success
-                break
-            fi
-            echo -n "."
-        done
-    fi
+  local offset
 
-    build_compute
+  if [ -z "${REGISTRATION_URL}" ]; then
+    build_master
+  fi
+
+  offset=$(build_hosts)
+  wait_for_server
+  register_hosts $offset
+
+  server_ip=$(get_server_ip)
+  echo "Connect to rancher-server at http://${server_ip}:8080/"
+  echo ""
 }
 
 main()
 {
-    if [[ "${LIST_NODES_FLAG}" = "true" ]]; then
-        list_nodes
-    elif [[ "${SHOW_IP_FLAG}" = "true" ]]; then
-        get_master_ip
-    elif [[ "${DELETE_NODES_FLAG}" = "true" ]]; then
-        delete_nodes
-    elif [[ "${CREATE_NODES_FLAG}" = "true" || "${REGISTRATION_URL}" ]]; then
-        build_cluster
-    else
-        echo "Unable to take action" 1>&2
-        print_help
-        exit 1
-    fi
+  if [[ "${LIST_HOSTS_FLAG}" = "true" ]]; then
+    list_hosts
+  elif [[ "${SHOW_IP_FLAG}" = "true" ]]; then
+    get_server_ip
+  elif [[ "${DELETE_FLAG}" = "true" ]]; then
+    delete_cluster
+  elif [[ "${CREATE_FLAG}" = "true" || "${REGISTRATION_URL}" ]]; then
+    build_cluster
+  else
+    echo "Unable to take action" 1>&2
+    print_help
+    exit 1
+  fi
 }
 
 main

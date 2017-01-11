@@ -1,9 +1,9 @@
-# Wrapper to deploy Rancher on Google Compute Engine or Docker for Mac
+# Wrapper to deploy Rancher on Google Compute Engine or Docker Machine on macOS
 
 These scripts bootstrap a Rancher server and register one or more host node VMs to it.
 
 - [Google Compute Engine](#google-compute-engine)
-- [Docker for Mac Beta](#docker-for-mac-beta)
+- [Docker Machine on macOS](#docker-machine-on-macos)
 
 ## Google Compute Engine
 
@@ -18,7 +18,7 @@ These scripts bootstrap a Rancher server and register one or more host node VMs 
             needs full container repo/name[:tag]
     -c - Cluster name [Required]
     -d - DELETE ALL NODES
-    -e - External IP for master...(yes this is getting rediculous)
+    -e - External IP for master...(yes this is getting ridiculous)
     -h - Print this message
     -i - Show the IP address of the master
     -l - List nodes or clusters if no -c is passed
@@ -70,7 +70,7 @@ The default is Ubuntu-14-04 if no -o option is specified.
 
 ### Deploy source code versions
 ```
-gce-10acre-ranch -s rancher/build-master -p server -c rancher-dev -n 1
+gce-10acre-ranch -s rancher/server:master -p server -c rancher-dev -n 1
 ```
 
 Currently all nodes will be deployed with Ubuntu 14.04. The naming convention is:
@@ -117,35 +117,32 @@ You can hit this IP over port 8080 to get to the UI
 ```
 
 ------
-## Docker for Mac Beta
+## Docker Machine on macOS
 
 ### Prerequisites
 
-- Docker for Mac (http://beta.docker.com)
-
-For additional hosts beyond the Docker for Mac VM:
-
+- Docker for Mac (https://www.docker.com/products/docker#/mac) (for docker-machine)
 - docker-machine-driver-xhyve (https://github.com/zchee/docker-machine-driver-xhyve)
 
 ### Usage
 ```
 mac-ranch Usage:
-    mac-ranch [opts]
-    -c - Create world
-    -d - Destroy world
-    -h - Print this message
-    -i - Print IP of Docker for Mac VM
-    -l - List hosts
-    -r registration_url - Register another "-n" hosts using the given registration url
+  mac-ranch [opts]
+  -c - Create world
+  -d - Destroy world
+  -h - Print this message
+  -i - Print IP of server VM
+  -l - List hosts
+  -r registration_url - Register another "-n" hosts using the given registration url
 
-    -b - Boot2Docker URL (default: the one for v1.11.2)
-    -M - Host memory in mb (default: 1024)
-    -n - Number of hosts, not including the "inception" Docker for Mac VM (see -v) (default: 0)
-    -p - privileged (needed for build-master)
-    -s - Server Container (default: rancher/server:latest)
-            needs full container repo/name[:tag] 
-    -u - Registry mirror URL (default: none)
-    -v - No Inception - Prevent registering the Docker for Mac VM as a host
+  -b - Boot2Docker URL (default: the one for v1.12.3)
+  -M - Host memory in mb (default: 1024)
+  -m - Server memory in mb (default: 2048)
+  -n - Number of hosts (default: 2)
+  -p - privileged (needed for rancher/server:master)
+  -s - Server Container (default: rancher/server:latest)
+       needs full container repo/name[:tag]
+  -u - Registry mirror URL (default: none)
 ```
 
 ### To deploy (single host):
