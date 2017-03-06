@@ -1,6 +1,6 @@
 #!/bin/bash
 #set -o xtrace
-set -e 
+set -e
 
 which docker >/dev/null 2>&1 || {
   echo "docker command not found." 1>&2
@@ -24,13 +24,13 @@ mac-ranch Usage:
   -l - List hosts
   -r registration_url - Register another "-n" hosts using the given registration url
 
-  -b - Boot2Docker URL (default: the one for v1.12.3)
+  -b - Boot2Docker URL (default: the one for v17.03.0-ce)
   -M - Host memory in mb (default: 1024)
   -m - Server memory in mb (default: 2048)
   -n - Number of hosts (default: 2)
   -p - privileged (needed for build-master)
   -s - Server Container (default: rancher/server:latest)
-       needs full container repo/name[:tag] 
+       needs full container repo/name[:tag]
   -u - Registry mirror URL (default: none)
 EOF
 }
@@ -38,13 +38,14 @@ EOF
 SERVER_NAME="rs"
 SERVER_IMAGE="rancher/server:latest"
 SERVER_MACHINE_SIZE="2048"
-BOOT2DOCKER="https://github.com/boot2docker/boot2docker/releases/download/v1.12.3/boot2docker.iso"
+SERVER_MACHINE_CPUS="2"
+BOOT2DOCKER="https://github.com/boot2docker/boot2docker/releases/download/v17.03.0-ce/boot2docker.iso"
 BOOT_ARGS="loglevel=3 user=docker console=ttyS0 console=tty0 noembed nomodeset norestore waitusb=10 base"
 HOST_PREFIX="${SERVER_NAME}-host"
 HOST_COUNT=2
 HOST_MACHINE_SIZE="1024"
 MIRROR_URL=""
-PULL_IMAGES=("hello-world" "nginx" "busybox" "ubuntu" "vincent99/curl" "cloudnautique/hello-world")
+PULL_IMAGES=("hello-world" "nginx" "busybox" "ubuntu" "rancher/curl" "cloudnautique/hello-world")
 
 while getopts ":b:cdhilM:m:n:pr:s:u:" opt;do
   case $opt in
@@ -134,7 +135,7 @@ get_server_ip()
   echo $(docker-machine ip ${SERVER_NAME})
 }
 
-create_reg_tokens() # Signature: rancher_server_ip
+create_reg_token()
 {
   server_ip=$(get_server_ip)
   project_id=$(curl -s -X GET http://${server_ip}:8080/v1/projects|python -c'import json,sys;print(json.load(sys.stdin)["data"][0]["id"])')
@@ -143,18 +144,15 @@ create_reg_tokens() # Signature: rancher_server_ip
 
 get_reg_url()
 {
-  ## This is a bit hacky...
-  local reg_tokens_link
-  reg_tokens_link=$(create_reg_tokens)
-  sleep 1
-  echo $(curl -s -X GET $reg_tokens_link|python -c'import json,sys; print(json.load(sys.stdin)["registrationUrl"])')
-}
-
-get_run_cmd()
-{
-  reg_tokens_link=$(create_reg_tokens)
-  sleep 1
-  echo $(curl -s -X GET $reg_tokens_link|python -c'import json,sys; print(json.load(sys.stdin)["command"])')
+  if [ -z $REGISTRATION_URL ]; then
+    local reg_tokens_link
+    reg_tokens_link=$(create_reg_token)
+    # @TODO wait for token to be active properly...
+    sleep 2
+    echo $(curl -s -X GET $reg_tokens_link|python -c'import json,sys; print(json.load(sys.stdin)["registrationUrl"])')
+  else
+    echo $REGISTRATION_URL
+  fi
 }
 
 build_master()
@@ -173,6 +171,7 @@ build_master()
     --driver=xhyve \
     --xhyve-boot2docker-url="${BOOT2DOCKER}" \
     --xhyve-memory-size="${SERVER_MACHINE_SIZE}" \
+    --xhyve-cpu-count="${SERVER_MACHINE_CPUS}" \
     --xhyve-boot-cmd="${BOOT_ARGS} host=${name}" \
     ${mirror} ${SERVER_NAME}
 
@@ -189,6 +188,8 @@ build_hosts()
   local name
   local offset
   local first_offset
+  local sequence
+  local i
 
   mirror=""
   if [[ "${MIRROR_URL}" ]]; then
@@ -198,14 +199,17 @@ build_hosts()
   if [ "${HOST_COUNT}" -gt "0" ]; then
     offset=$(list_host_names|wc -l)
     first_offset=$offset
-    for i in $(seq $((${offset} + 1)) $((${offset} + ${HOST_COUNT}))); do
+    sequence=$(seq $((${offset} + 1)) $((${offset} + ${HOST_COUNT})))
+
+    for i in $sequence
+    do
       name="${HOST_PREFIX}${i}"
-      echo "Creating ${name}"
+      echoerr "Creating ${name}"
       docker-machine create \
         --driver=xhyve \
         --xhyve-boot2docker-url="${BOOT2DOCKER}" \
         --xhyve-memory-size="${HOST_MACHINE_SIZE}" \
-        --xhyve-boot-cmd="${BOOT_ARGS} host=${name}" ${mirror} ${name}
+        --xhyve-boot-cmd="${BOOT_ARGS} host=${name}" ${mirror} ${name} 1>&2;
     done
   fi
 
@@ -218,19 +222,26 @@ register_hosts()
   local offset
   local ip_cmd
   local registration_cmd
+  local sequence
+  local i
+  local j
 
   offset=$1
+  echoerr "Register hosts starting at ${offset}"
   ip_cmd="\$(ifconfig eth0 | grep 'inet ' | awk -F'[: ]+' '{ print \$4 }')"
-  registration_cmd="docker run -e CATTLE_AGENT_IP=\"${ip_cmd}\" $(echo $(get_run_cmd)|sed 's/^sudo docker run//')"
+  registration_cmd="docker run -e CATTLE_AGENT_IP=\"${ip_cmd}\" -d -v /var/run/docker.sock:/var/run/docker.sock rancher/agent $(get_reg_url)"
+  sequence=$(seq $((${offset} + 1)) $((${offset} + ${HOST_COUNT})))
 
   if [ "${HOST_COUNT}" -gt "0" ]; then
-    for i in $(seq $((${offset} + 1)) $((${offset} + ${HOST_COUNT}))); do
+    for i in $sequence
+    do
       name="${HOST_PREFIX}${i}"
-      echo "Registering ${name}"
-      docker-machine ssh ${name} ${registration_cmd}
-      for j in "${PULL_IMAGES[@]}"; do
-        echo "Pulling images for ${name}"
-        docker-machine ssh ${name} docker pull "${j}"
+      echoerr "Registering ${name}: ${registration_cmd}"
+      docker-machine ssh ${name} ${registration_cmd} 1>&2;
+      for j in "${PULL_IMAGES[@]}"
+      do
+        echoerr "Pulling images for ${name}"
+        docker-machine ssh ${name} docker pull "${j}" 1>&2;
       done
     done
   fi
@@ -281,6 +292,11 @@ main()
     print_help
     exit 1
   fi
+}
+
+echoerr()
+{
+  printf "%s\n" "$*" >&2;
 }
 
 main
