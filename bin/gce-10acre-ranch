@@ -355,7 +355,6 @@ generate_build_script() # signature: role container build_file
                 docker_opts+=(, '"--privileged"')
             fi
 
-
             if [[ "${REPOS}" != "" ]]; then
                 repos_value=\""REPOS="\"${REPOS}\"\"
                 docker_opts+=(, '"-v"', '"/var/run/docker.sock:/var/run/docker.sock"', '"-e"', ${repos_value})
