@@ -1,6 +1,6 @@
 #!/bin/bash
 #set -o xtrace
-set -e 
+set -e
 
 if [ $(whoami) == "root" ]; then
     echo "Do not run as root!" 1>&2
@@ -18,7 +18,7 @@ print_help()
 {
     cat 1>&2 <<EOF
 gce-10acre-ranch Usage:
-    gce-10acre-ranch [opts] 
+    gce-10acre-ranch [opts]
     -a - Agent Container:
             needs full container repo/name[:tag]
     -b - Boot disk size in GB (40 default)
@@ -48,8 +48,9 @@ gce-10acre-ranch Usage:
         - all
     -q - Do not prompt user
     -r - Registration url
+    -R - REPOS to use for rancher/server:master build
     -s - Server Container:
-            needs full container repo/name[:tag] 
+            needs full container repo/name[:tag]
     -u - Docker install URL
     -z - Zone [us-central1-f default]
 EOF
@@ -67,7 +68,7 @@ ZONE="us-central1-f"
 NETWORK="default"
 DISK_SIZE=40
 
-while getopts ":a:b:c:de:hilm:M:n:o:p:qr:s:u:wz:N:" opt;do
+while getopts ":a:b:c:de:hilm:M:n:o:p:qr:R:s:u:wz:N:" opt;do
     case $opt in
     a)
         AGENT_CONTAINER="${OPTARG}"
@@ -131,6 +132,9 @@ while getopts ":a:b:c:de:hilm:M:n:o:p:qr:s:u:wz:N:" opt;do
         ;;
     r)
         REGISTRATION_URL="${OPTARG}"
+        ;;
+    R)
+        REPOS=${OPTARG}
         ;;
     q)
         QUIET="true"
@@ -200,7 +204,7 @@ get_master_ip()
 
 get_os_project()
 {
-    local project 
+    local project
 
     # Has to be a better more dynamic way...that also isn't slow.
     case $OS_FAMILY in
@@ -338,6 +342,7 @@ generate_build_script() # signature: role container build_file
     local build_file
     local docker_opts
     local docker_cmd
+    local repos_value
 
     case $1 in
         master)
@@ -348,6 +353,12 @@ generate_build_script() # signature: role container build_file
 
             if [[ "${PRIVILEGED_MASTER}" = "true" ]]; then
                 docker_opts+=(, '"--privileged"')
+            fi
+
+
+            if [[ "${REPOS}" != "" ]]; then
+                repos_value=\""REPOS="\"${REPOS}\"\"
+                docker_opts+=(, '"-v"', '"/var/run/docker.sock:/var/run/docker.sock"', '"-e"', ${repos_value})
             fi
 
             ;;
@@ -375,6 +386,10 @@ generate_build_script() # signature: role container build_file
         container="${2}"
     fi
 
+    if [[ "${REPOS}" != "" ]]; then
+        container="rancher/server:master"
+    fi
+
     build_file=$3
 
     if [ "$(get_user_data_flag)" = "true" ]; then
@@ -396,16 +411,16 @@ build_master()
 build_compute()
 {
     local instances
-    
+
     build_file="/tmp/10acre-worker-build.sh"
 
     offset=$(list_nodes|grep -v '^NAME\|-10acre-master-0'|wc -l)
-    
+
     for i in $(seq $((${offset} + 1)) $((${offset} + ${INSTANCE_COUNT}))); do
         instances="${CLUSTER_NAME}-${i} ${instances}"
     done
 
-    if [ -n "${AGENT_CONTAINER}" ]; then 
+    if [ -n "${AGENT_CONTAINER}" ]; then
         generate_build_script "worker" "${AGENT_CONTAINER}" ${build_file}
     else
         docker_run_cmd="$(echo $(get_run_cmd)|sed 's/^sudo //')"
@@ -436,15 +451,15 @@ build_cluster()
     fi
 }
 
-main() 
+main()
 {
     if [[ "${LIST_NODES_FLAG}" = "true" && -z "${CLUSTER_NAME}" ]]; then
         list_nodes | grep -- '-10acre-master-' | sed -e 's/^\(.*\)\(-10acre-master.*\)$/\1/' | sort -u
     elif [[ "${LIST_NODES_FLAG}" = "true" && "${CLUSTER_NAME}" ]]; then
-        list_nodes 
+        list_nodes
     elif [ "${MASTER_IP_FLAG}" = "true" ]; then
         get_master_ip
-    elif [[ "${DELETE_NODES_FLAG}" = "true" && -n "${CLUSTER_NAME}" ]]; then 
+    elif [[ "${DELETE_NODES_FLAG}" = "true" && -n "${CLUSTER_NAME}" ]]; then
         delete_nodes
     elif [[ -n "${INSTANCE_COUNT}" && -n "${CLUSTER_NAME}" ]]; then
         build_cluster
