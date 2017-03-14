@@ -1,5 +1,5 @@
 #!/bin/bash
-#set -o xtrace
+set -o xtrace
 set -e
 
 which docker >/dev/null 2>&1 || {
@@ -29,6 +29,7 @@ mac-ranch Usage:
   -m - Server memory in mb (default: 2048)
   -n - Number of hosts (default: 2)
   -p - privileged (needed for build-master)
+  -R - REPOS to use for rancher/server:master build
   -s - Server Container (default: rancher/server:latest)
        needs full container repo/name[:tag]
   -u - Registry mirror URL (default: none)
@@ -36,7 +37,9 @@ EOF
 }
 
 SERVER_NAME="rs"
-SERVER_IMAGE="rancher/server:latest"
+DEFAULT_IMAGE="rancher/server:latest"
+MASTER_IMAGE="rancher/server:master"
+SERVER_IMAGE="${DEFAULT_IMAGE}"
 SERVER_MACHINE_SIZE="2048"
 SERVER_MACHINE_CPUS="2"
 BOOT2DOCKER="https://github.com/boot2docker/boot2docker/releases/download/v17.03.0-ce/boot2docker.iso"
@@ -47,7 +50,7 @@ HOST_MACHINE_SIZE="1024"
 MIRROR_URL=""
 PULL_IMAGES=("hello-world" "nginx" "busybox" "ubuntu" "rancher/curl" "cloudnautique/hello-world")
 
-while getopts ":b:cdhilM:m:n:pr:s:u:" opt;do
+while getopts ":b:cdhilM:m:n:pr:R:s:u:" opt;do
   case $opt in
   b)
     BOOT2DOCKER="${OPTARG}"
@@ -79,6 +82,9 @@ while getopts ":b:cdhilM:m:n:pr:s:u:" opt;do
     ;;
   p)
     PRIVILEGED_MASTER="true"
+    ;;
+  R)
+    REPOS=${OPTARG}
     ;;
   r)
     REGISTRATION_URL="${OPTARG}"
@@ -167,6 +173,16 @@ build_master()
     mirror="--engine-registry-mirror=${MIRROR_URL}"
   fi
 
+  repos=""
+  if [[ "${REPOS}" ]]; then
+    repos="-e REPOS=\"${REPOS}\""
+  fi
+
+  image="${SERVER_IMAGE}"
+  if [[ "${REPOS}" != "" && "${image}" = "${DEFAULT_IMAGE}" ]]; then
+      image="${MASTER_IMAGE}"
+  fi
+
   docker-machine create \
     --driver=xhyve \
     --xhyve-boot2docker-url="${BOOT2DOCKER}" \
@@ -177,10 +193,11 @@ build_master()
 
   docker-machine ssh ${SERVER_NAME} docker run -d \
     --restart=unless-stopped \
-    -p 8080:8080 ${privileged} \
+    -p 8080:8080 ${privileged} ${repos} \
     --name=rancher-server \
+    -e DEFAULT_CATTLE_TELEMETRY_OPT="out" \
     -e DEFAULT_CATTLE_API_HOST="$(get_server_ip):8080" \
-    ${SERVER_IMAGE}
+    ${image}
 }
 
 build_hosts()
