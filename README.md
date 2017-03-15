@@ -42,6 +42,7 @@ These scripts bootstrap a Rancher server and register one or more host node VMs 
         - all
     -q - Do not prompt user
     -r - Registration url
+    -R - REPOS to use for rancher/server:master build
     -s - Server Container:
             needs full container repo/name[:tag]
     -t - Test docker repos
@@ -140,6 +141,7 @@ mac-ranch Usage:
   -m - Server memory in mb (default: 2048)
   -n - Number of hosts (default: 2)
   -p - privileged (needed for rancher/server:master)
+  -R - REPOS to use for rancher/server:master build
   -s - Server Container (default: rancher/server:latest)
        needs full container repo/name[:tag]
   -u - Registry mirror URL (default: none)
