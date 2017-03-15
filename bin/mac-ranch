@@ -175,7 +175,7 @@ build_master()
 
   repos=""
   if [[ "${REPOS}" ]]; then
-    repos="-e REPOS=\"${REPOS}\""
+    repos="-e REPOS=\"${REPOS}\" -v /var/run/docker.sock:/var/run/docker.sock"
   fi
 
   image="${SERVER_IMAGE}"
