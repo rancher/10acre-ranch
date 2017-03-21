@@ -356,8 +356,8 @@ generate_build_script() # signature: role container build_file
             fi
 
             if [[ "${REPOS}" != "" ]]; then
-                repos_value=\""REPOS="\"${REPOS}\"\"
-                docker_opts+=(, '"-v"', '"/var/run/docker.sock:/var/run/docker.sock"', '"-e"', ${repos_value})
+                repos_value="-e REPOS="\"${REPOS}\"
+                docker_opts+=(, '"-v"', '"/var/run/docker.sock:/var/run/docker.sock"')
             fi
 
             ;;
@@ -394,7 +394,7 @@ generate_build_script() # signature: role container build_file
     if [ "$(get_user_data_flag)" = "true" ]; then
         user_data_clusters $(id -un) "$(cat ~/.ssh/id_rsa.pub)" ${build_file} "${container}" "${DOCKER_URL}" "${docker_cmd}" "${docker_opts[@]}"
     else
-        docker_run_cmd="docker $(echo ${docker_opts[@]}| sed -e 's/,//g'|sed -e 's/\"//g') ${container} ${docker_cmd}"
+        docker_run_cmd="docker $(echo ${docker_opts[@]}| sed -e 's/,//g'|sed -e 's/\"//g') ${repos_value} ${container} ${docker_cmd}"
         create_file ${build_file} "${docker_run_cmd}"
     fi
 
