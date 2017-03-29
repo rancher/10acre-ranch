@@ -16,7 +16,8 @@ These scripts bootstrap a Rancher server and register one or more host node VMs 
     gce-10acre-ranch [opts]
     -a - Agent Container:
             needs full container repo/name[:tag]
-    -c - Cluster name [Required]
+    -b - Boot disk size in GB (40 default)
+    -c - Cluster name[Required]
     -d - DELETE ALL NODES
     -e - External IP for master...(yes this is getting ridiculous)
     -h - Print this message
@@ -24,7 +25,7 @@ These scripts bootstrap a Rancher server and register one or more host node VMs 
     -l - List nodes or clusters if no -c is passed
     -m - Master Machine type (g1-small default)
     -M - Node Machine type (g1-small default)
-    -n - Number of nodes [defaults to 3]
+    -n - Number of nodes [defaults to 1]
     -N - Network [default is default]
     -o - OS image
            centos-6 (Servers only. Configuration is manual)
@@ -45,7 +46,7 @@ These scripts bootstrap a Rancher server and register one or more host node VMs 
     -R - REPOS to use for rancher/server:master build
     -s - Server Container:
             needs full container repo/name[:tag]
-    -t - Test docker repos
+    -u - Docker install URL
     -z - Zone [us-central1-f default]
 ```
 
@@ -92,6 +93,15 @@ Or both
 ```
 The Docker images must be real and accessible to Docker.
 
+### Using specific REPOS
+
+Ability to use [repos](https://github.com/rancher/rancher/blob/master/server/README.md) for `rancher/server:master`
+
+```
+./gce-10acre-ranch -c <cluster name> -R rancher-compose-executor
+
+./gce-10acre-rancher -c <cluser name> -R rancher-compose-executor,https://github.com/rancher/cattle,origin/otherbranch
+```
 
 ### Get the master IP:
 
