@@ -395,6 +395,7 @@ generate_build_script() # signature: role container build_file
         user_data_clusters $(id -un) "$(cat ~/.ssh/id_rsa.pub)" ${build_file} "${container}" "${DOCKER_URL}" "${docker_cmd}" "${docker_opts[@]}"
     else
         docker_run_cmd="docker $(echo ${docker_opts[@]}| sed -e 's/,//g'|sed -e 's/\"//g') ${repos_value} ${container} ${docker_cmd}"
+        echo ${docker_run_cmd}
         create_file ${build_file} "${docker_run_cmd}"
     fi
 
