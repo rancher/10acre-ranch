@@ -204,7 +204,7 @@ delete_nodes()
 get_master_ip()
 {
     IP=$(gcloud compute instances describe "${MASTER_NAME}" --project ${GCE_PROJECT} --zone ${ZONE} | grep natIP | cut -d':' -f2)
-    echo $IP
+    echo ${IP%%[[:space:]]}
 }
 
 get_os_project()
