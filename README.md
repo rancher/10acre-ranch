@@ -129,7 +129,7 @@ You can hit this IP over port 8080 to get to the UI
 ```
 mac-ranch Usage:
   mac-ranch [opts]
-  -c - Create world
+  -c name - Cluster name/Create world if no other action is specified
   -d - Destroy world
   -h - Print this message
   -i - Print IP of server VM
@@ -147,35 +147,35 @@ mac-ranch Usage:
   -u - Registry mirror URL (default: none)
 ```
 
-### To deploy (single host):
+### To deploy (single host named `rs`):
 
 ```
-./mac-ranch -c
+./mac-ranch -c rs
 ```
 
 #### A specific release
 ```
-./mac-ranch -c -s rancher/server:vX.Y.Z
+./mac-ranch -c rs -s rancher/server:vX.Y.Z
 ```
 
 #### Build from master
 ```
-./mac-ranch -c -p -s rancher/server:master
+./mac-ranch -c rs -p -s rancher/server:master
 ```
 
 #### Multiple hosts
 ```
-./mac-ranch -c -n <number of additional hosts>
+./mac-ranch -c rs -n <number of additional hosts>
 ```
 
 ### List all the (external) hosts
 ```
-./mac-ranch -l
+./mac-ranch -c rs -l
 ```
 
 ### Destroy everything
 ```
-./mac-ranch -d
+./mac-ranch -c rs -d
 ```
 
 ### Contact
