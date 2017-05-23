@@ -25,6 +25,7 @@ gce-10acre-ranch Usage:
     -c - Cluster name[Required]
     -d - DELETE ALL NODES
     -e - External IP for master...(yes this is getting ridiculous)
+    -f - Boot disk type (pd-standard default)
     -h - Print this message
     -i - Show the IP address of the master
     -l - List nodes or clusters if no -c is passed
@@ -67,8 +68,9 @@ NODE_MACHINE_TYPE="g1-small"
 ZONE="us-central1-f"
 NETWORK="default"
 DISK_SIZE=40
+DISK_TYPE="pd-standard"   # SSD is "pd-ssd"
 
-while getopts ":a:b:c:de:hilm:M:n:o:p:qr:R:s:u:wz:N:" opt;do
+while getopts ":a:b:c:de:f:hilm:M:n:o:p:qr:R:s:u:wz:N:" opt;do
     case $opt in
     a)
         AGENT_CONTAINER="${OPTARG}"
@@ -86,6 +88,9 @@ while getopts ":a:b:c:de:hilm:M:n:o:p:qr:R:s:u:wz:N:" opt;do
         ;;
     e)
         EXTERNAL_IP=${OPTARG}
+        ;;
+    f)
+        DISK_TYPE=${OPTARG}
         ;;
     h)
         print_help
@@ -270,6 +275,7 @@ gcloud_create()
     gcloud_args="--zone ${ZONE}
         --machine-type ${5}
         --boot-disk-size=${DISK_SIZE}GB
+        --boot-disk-type=${DISK_TYPE}
         --network ${NETWORK}
         --project ${GCE_PROJECT}
         --metadata-from-file ${metadata_key}=${2}
