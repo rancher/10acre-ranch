@@ -190,7 +190,8 @@ build_master()
 
   docker-machine ssh ${SERVER_NAME} docker run -d \
     --restart=unless-stopped \
-    -p 8080:8080 ${repos} \
+    -p 8080:8080 \
+    -p 3306:3306 ${repos} \
     --name=rancher-server \
     -e DEFAULT_CATTLE_TELEMETRY_OPT="out" \
     -e DEFAULT_CATTLE_API_HOST="$(get_server_ip):8080" \
