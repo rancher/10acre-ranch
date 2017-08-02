@@ -172,7 +172,7 @@ build_master()
 
   repos=""
   if [[ "${REPOS}" ]]; then
-    repos="-e REPOS=\"${REPOS}\" -v /var/run/docker.sock:/var/run/docker.sock"
+    repos="-e REPOS=\"${REPOS}\""
   fi
 
   image="${SERVER_IMAGE}"
@@ -192,6 +192,7 @@ build_master()
     --restart=unless-stopped \
     -p 8080:8080 \
     -p 3306:3306 ${repos} \
+    -v /var/run/docker.sock:/var/run/docker.sock \
     --name=rancher-server \
     -e DEFAULT_CATTLE_TELEMETRY_OPT="out" \
     -e DEFAULT_CATTLE_API_HOST="$(get_server_ip):8080" \
