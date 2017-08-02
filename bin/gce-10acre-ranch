@@ -354,7 +354,7 @@ generate_build_script() # signature: role container build_file
         master)
             default_container="rancher/server"
 
-            docker_opts=('"run"', '"-d"', '"-p"', '"8080:8080"', '"-e"', '"DEFAULT_CATTLE_TELEMETRY_OPT=out"');
+            docker_opts=('"run"', '"-d"', '"-p"', '"8080:8080"', '"-e"', '"DEFAULT_CATTLE_TELEMETRY_OPT=out"', '"-v"', '"/var/run/docker.sock:/var/run/docker.sock"');
             docker_cmd=
 
             if [[ "${PRIVILEGED_MASTER}" = "true" ]]; then
@@ -363,7 +363,6 @@ generate_build_script() # signature: role container build_file
 
             if [[ "${REPOS}" != "" ]]; then
                 repos_value="-e REPOS="\"${REPOS}\"
-                docker_opts+=(, '"-v"', '"/var/run/docker.sock:/var/run/docker.sock"')
             fi
 
             ;;
