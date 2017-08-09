@@ -1,5 +1,5 @@
 #!/bin/bash
-#set -o xtrace
+set -o xtrace
 set -e
 
 which docker >/dev/null 2>&1 || {
@@ -24,7 +24,7 @@ mac-ranch Usage:
   -l - List hosts
   -r registration_url - Register another "-n" hosts using the given registration url
 
-  -b - Boot2Docker URL or version tag (default: v17.03.1-ce)
+  -b - Boot2Docker URL or version tag (default: RancherOS Latest)
   -M - Host memory in mb (default: 1024)
   -m - Server memory in mb (default: 2048)
   -n - Number of hosts (default: 2)
@@ -41,7 +41,7 @@ MASTER_IMAGE="rancher/server:master"
 SERVER_IMAGE="${DEFAULT_IMAGE}"
 SERVER_MACHINE_SIZE="2048"
 SERVER_MACHINE_CPUS="2"
-BOOT2DOCKER="https://github.com/boot2docker/boot2docker/releases/download/v17.03.1-ce/boot2docker.iso"
+BOOT2DOCKER="https://releases.rancher.com/os/latest/rancheros.iso"
 BOOT_ARGS="loglevel=3 user=docker console=ttyS0 console=tty0 noembed nomodeset norestore waitusb=10 base"
 HOST_PREFIX="${SERVER_NAME}-host"
 HOST_COUNT=2
@@ -146,8 +146,8 @@ get_server_ip()
 create_reg_token()
 {
   server_ip=$(get_server_ip)
-  project_id=$(curl -s -X GET http://${server_ip}:8080/v1/projects|python -c'import json,sys;print(json.load(sys.stdin)["data"][0]["id"])')
-  echo $(curl -s -X POST http://${server_ip}:8080/v1/projects/${project_id}/registrationtokens|python -c'import json,sys; print(json.load(sys.stdin)["links"]["self"])')
+  project_id=$(curl -s -X GET http://${server_ip}:8080/v2-beta/projects|python -c'import json,sys;print(json.load(sys.stdin)["data"][0]["id"])')
+  echo $(curl -s -X POST http://${server_ip}:8080/v2-beta/projects/${project_id}/registrationtokens|python -c'import json,sys; print(json.load(sys.stdin)["links"]["self"])')
 }
 
 get_reg_url()
