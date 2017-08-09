@@ -295,8 +295,8 @@ gcloud_create()
 
 create_reg_tokens() # Signature: rancher_server_ip
 {
-    project_id=$(curl -s -X GET http://${1}:8080/v1/projects|python -c'import json,sys;print(json.load(sys.stdin)["data"][0]["id"])')
-    echo $(curl -s -X POST http://${1}:8080/v1/projects/${project_id}/registrationtokens|python -c'import json,sys; print(json.load(sys.stdin)["links"]["self"])')
+    project_id=$(curl -s -X GET http://${1}:8080/v2-beta/projects|python -c'import json,sys;print(json.load(sys.stdin)["data"][0]["id"])')
+    echo $(curl -s -X POST http://${1}:8080/v2-beta/projects/${project_id}/registrationtokens|python -c'import json,sys; print(json.load(sys.stdin)["links"]["self"])')
 }
 
 get_reg_url()
