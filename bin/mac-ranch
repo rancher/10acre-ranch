@@ -350,9 +350,13 @@ while getopts ":b:cdhilM:m:n:pPr:R:s:u:" opt;do
 done
 
 shift $((OPTIND-1))
-
-if [ "$1" ]; then
+if [[ "$1" ]]; then
   CLUSTER_NAME=$1
+fi
+
+if [ "$#" -gt 1 ]; then
+  echoerr "Unexpected option after cluster_name: $2"
+  exit 1
 fi
 
 HOST_PREFIX="${CLUSTER_NAME}-host"
