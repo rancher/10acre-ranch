@@ -137,27 +137,29 @@ You can hit this IP over port 8080 to get to the UI
 
 ### Usage
 ```
-mac-ranch Usage:
-  mac-ranch [opts]
-  -c name - Cluster name/Create world if no other action is specified
-  -d - Destroy world
+mac-ranch [opts] cluster_name
+
+Top-level actions:
+  -c - Create cluster
+  -d - Destroy cluster
   -h - Print this message
   -i - Print IP of server VM
-  -l - List hosts
-  -r registration_url - Register another "-n" hosts using the given registration url
+  -l - List cluser VMs
+  -p - Stop cluster
+  -P - Start cluster
+  -r registration_url - Create "-n" additional hosts using the given registration url
 
-  -b - Boot2Docker URL (default: the one for v1.12.3)
-  -M - Host memory in mb (default: 1024)
-  -m - Server memory in mb (default: 2048)
+Additional create options:
+  -b - Boot2Docker URL or version tag (default: RancherOS Latest)
+  -M - Host memory in MB (default: 1024)
+  -m - Server memory in MB (default: 2048)
   -n - Number of hosts (default: 2)
-  -p - privileged (needed for rancher/server:master)
-  -R - REPOS to use for rancher/server:master build
-  -s - Server Container (default: rancher/server:latest)
-       needs full container repo/name[:tag]
+  -R - REPOS to use for master build (implies -s rancher/server:master)
+  -s - Server Container image (default: rancher/server:latest)
   -u - Registry mirror URL (default: none)
 ```
 
-### To deploy (single host named `rs`):
+### To deploy (single server named `rs` with two hosts `rs-host1` and `rs-host2`):
 
 ```
 ./mac-ranch -c rs
@@ -165,27 +167,25 @@ mac-ranch Usage:
 
 #### A specific release
 ```
-./mac-ranch -c rs -s rancher/server:vX.Y.Z
+./mac-ranch -c -s rancher/server:vX.Y.Z rs
 ```
 
 #### Build from master
 ```
-./mac-ranch -c rs -p -s rancher/server:master
+./mac-ranch -c -s rancher/server:master rs
 ```
 
-#### Multiple hosts
+#### Build from master with specific REPO overrides
 ```
-./mac-ranch -c rs -n <number of additional hosts>
-```
-
-### List all the (external) hosts
-```
-./mac-ranch -c rs -l
+./mac-ranch -c -R "https://github.com/you/cattle,origin/yourbranch" rs
 ```
 
-### Destroy everything
+### Manipulate clusters
 ```
-./mac-ranch -c rs -d
+./mac-ranch -l rs  # List VMs
+./mac-ranch -p rs  # Stop VMs
+./mac-ranch -P rs  # Start VMs
+./mac-ranch -d rs  # Destroy VMS
 ```
 
 ### Contact
@@ -194,7 +194,7 @@ For bugs, questions, comments, corrections, suggestions, etc., open an issue in 
 Or just [click here](//github.com/rancher/rancher/issues/new?title=%5B10acre-ranch%5D%20) to create a new issue.
 
 # License
-Copyright (c) 2014-2016 [Rancher Labs, Inc.](http://rancher.com)
+Copyright (c) 2014-2017 [Rancher Labs, Inc.](http://rancher.com)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
