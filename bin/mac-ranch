@@ -35,6 +35,11 @@ echoerr()
   printf "%s\n" "$*" >&2;
 }
 
+list_clusters()
+{
+  (docker-machine ls --format "{{.Name}}" | grep -v "\-host\d*$") || echo -n ""
+}
+
 list_hosts()
 {
   docker-machine ls --filter name="^${CLUSTER_NAME}(\$|-)"
@@ -58,7 +63,7 @@ cluster_op()
   fi
 
   if [[ "${hosts}${server}" ]]; then
-    docker-machine $op ${hosts} ${server}
+    docker-machine $1 ${hosts} ${server}
   fi
 }
 
@@ -229,15 +234,22 @@ main()
     exit 1
   }
 
+  if [[ "${LIST_HOSTS_FLAG}" = "true" ]]; then
+    if [ -z $CLUSTER_NAME ]; then
+      list_clusters
+    else
+      list_hosts
+    fi
+    exit 0
+  fi
+
   if [ -z $CLUSTER_NAME ]; then
     echoerr "A cluster_name is required"
     print_help
     exit 1
   fi
 
-  if [[ "${LIST_HOSTS_FLAG}" = "true" ]]; then
-    list_hosts
-  elif [[ "${SHOW_IP_FLAG}" = "true" ]]; then
+  if [[ "${SHOW_IP_FLAG}" = "true" ]]; then
     get_server_ip
   elif [[ "${START_FLAG}" = "true" ]]; then
     cluster_op "start"
@@ -295,10 +307,10 @@ while getopts ":b:cdhilM:m:n:pPr:R:s:u:" opt;do
     SHOW_IP_FLAG="true"
     ;;
   p)
-    START_FLAG="true"
-    ;;
-  p)
     STOP_FLAG="true"
+    ;;
+  P)
+    START_FLAG="true"
     ;;
   l)
     LIST_HOSTS_FLAG="true"
