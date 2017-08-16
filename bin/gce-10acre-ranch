@@ -390,10 +390,6 @@ generate_build_script() # signature: role container build_file
         container="${2}"
     fi
 
-    if [[ "${REPOS}" != "" ]]; then
-        container="rancher/server:master"
-    fi
-
     build_file=$3
 
     if [ "$(get_user_data_flag)" = "true" ]; then
