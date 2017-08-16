@@ -144,7 +144,7 @@ Top-level actions:
   -d - Destroy cluster
   -h - Print this message
   -i - Print IP of server VM
-  -l - List cluser VMs
+  -l - List cluster VMs
   -p - Stop cluster
   -P - Start cluster
   -r registration_url - Create "-n" additional hosts using the given registration url
