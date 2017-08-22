@@ -17,7 +17,7 @@ Top-level actions:
   -l - List cluser VMs
   -p - Stop cluster
   -P - Start cluster
-  -r registration_url - Create "-n" additional hosts using the given registration url
+  -r registration_cmd - Create "-n" additional hosts using the given registration command
 
 Additional create options:
   -b - Boot2Docker URL or version tag (default: RancherOS Latest)
@@ -58,12 +58,14 @@ cluster_op()
   hosts=$(list_host_names)
   server=""
 
-  if docker-machine ip ${CLUSTER_NAME} >/dev/null 2>&1; then
+  if docker-machine inspect ${CLUSTER_NAME} >/dev/null 2>&1; then
     server="${CLUSTER_NAME}"
   fi
 
   if [[ "${hosts}${server}" ]]; then
     docker-machine $1 ${hosts} ${server}
+  else
+    echoerr "Cluster ${CLUSTER_NAME} not found"
   fi
 }
 
@@ -72,24 +74,33 @@ get_server_ip()
   echo $(docker-machine ip ${CLUSTER_NAME})
 }
 
-create_reg_token()
+get_registration_cmd()
 {
-  server_ip=$(get_server_ip)
-  project_id=$(curl -s -X GET http://${server_ip}:8080/v2-beta/projects|python -c'import json,sys;print(json.load(sys.stdin)["data"][0]["id"])')
-  echo $(curl -s -X POST http://${server_ip}:8080/v2-beta/projects/${project_id}/registrationtokens|python -c'import json,sys; print(json.load(sys.stdin)["links"]["self"])')
-}
+  local cmd
+  local server_ip
+  local ip_cmd
 
-get_reg_url()
-{
-  if [ -z $REGISTRATION_URL ]; then
-    local reg_tokens_link
-    reg_tokens_link=$(create_reg_token)
-    # @TODO wait for token to be active properly...
-    sleep 2
-    echo $(curl -s -X GET $reg_tokens_link|python -c'import json,sys; print(json.load(sys.stdin)["registrationUrl"])')
-  else
-    echo $REGISTRATION_URL
+  server_ip=$(get_server_ip)
+  ip_cmd="\$(ifconfig eth0 | grep 'inet ' | awk -F'[: ]+' '{ print \$4 }')"
+  cmd=${REGISTRATION_CMD}
+
+  if [ -z "${cmd}" ]; then
+    # v3 cluster
+    cmd=$(curl -s http://${server_ip}:8080/v3/clusters | python -c 'import json,sys; print(json.load(sys.stdin)["data"][0]["registrationToken"]["hostCommand"])')
   fi
+
+  if [ -z "${cmd}" ]; then
+    # v2 registrationToken
+    local project_id
+    local link
+    project_id=$(curl -s http://${server_ip}:8080/v2-beta/projects|python -c'import json,sys;print(json.load(sys.stdin)["data"][0]["id"])')
+    reg_tokens_link=$(curl -s -X POST http://${server_ip}:8080/v2-beta/projects/${project_id}/registrationtokens|python -c'import json,sys; print(json.load(sys.stdin)["links"]["self"])')
+    sleep 2
+    cmd=$(curl -s $reg_tokens_link|python -c'import json,sys; print(json.load(sys.stdin)["command"])')
+  fi
+
+  cmd=$(echo $cmd | sed "s/docker run/docker run -e CATTLE_AGENT_IP=\"${ip_cmd}\"/")
+  echo $cmd
 }
 
 build_master()
@@ -165,7 +176,6 @@ register_hosts()
 {
   local name
   local offset
-  local ip_cmd
   local registration_cmd
   local sequence
   local i
@@ -173,8 +183,7 @@ register_hosts()
 
   offset=$1
   echoerr "Register hosts starting at ${offset}"
-  ip_cmd="\$(ifconfig eth0 | grep 'inet ' | awk -F'[: ]+' '{ print \$4 }')"
-  registration_cmd="docker run -e CATTLE_AGENT_IP=\"${ip_cmd}\" -d -v /var/run/docker.sock:/var/run/docker.sock rancher/agent $(get_reg_url)"
+  registration_cmd=$(get_registration_cmd)
   sequence=$(seq $((${offset} + 1)) $((${offset} + ${HOST_COUNT})))
 
   if [ "${HOST_COUNT}" -gt "0" ]; then
@@ -209,7 +218,7 @@ build_cluster()
 {
   local offset
 
-  if [ -z "${REGISTRATION_URL}" ]; then
+  if [ -z "${REGISTRATION_CMD}" ]; then
     build_master
   fi
 
@@ -257,7 +266,7 @@ main()
     cluster_op "stop"
   elif [[ "${DELETE_FLAG}" = "true" ]]; then
     cluster_op "rm -y"
-  elif [[ "${CREATE_FLAG}" = "true" || "${REGISTRATION_URL}" ]]; then
+  elif [[ "${CREATE_FLAG}" = "true" || "${REGISTRATION_CMD}" ]]; then
     build_cluster
   else
     echoerr "No action specified"
@@ -328,7 +337,7 @@ while getopts ":b:cdhilM:m:n:pPr:R:s:u:" opt;do
     REPOS=${OPTARG}
     ;;
   r)
-    REGISTRATION_URL="${OPTARG}"
+    REGISTRATION_CMD="${OPTARG}"
     ;;
   s)
     SERVER_IMAGE="${OPTARG}"
