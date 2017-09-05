@@ -178,10 +178,10 @@ list_nodes()
     local opts
 
     if [ -n "${CLUSTER_NAME}" ]; then
-        opts="--regexp \"${CLUSTER_NAME}.*\""
+        opts="--filter=name~^${CLUSTER_NAME}.*"
     fi
 
-    gcloud compute instances list --project ${GCE_PROJECT} --zones ${ZONE} ${opts}
+    gcloud compute instances list --project ${GCE_PROJECT} --filter="zone:(${ZONE})" ${opts}
 }
 
 delete_nodes()
