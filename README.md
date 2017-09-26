@@ -47,6 +47,7 @@ These scripts bootstrap a Rancher server and register one or more host node VMs 
     -s - Server Container:
             needs full container repo/name[:tag]
     -u - Docker install URL
+    -U - Docker version 1.12, 1.13, 17.06 ..etc. Overrides -u
     -z - Zone [us-central1-f default]
 ```
 
