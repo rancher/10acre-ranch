@@ -53,6 +53,7 @@ gce-10acre-ranch Usage:
     -s - Server Container:
             needs full container repo/name[:tag]
     -u - Docker install URL
+    -U - Docker version 1.12, 1.13, 17.06 ..etc. Overrides -u
     -z - Zone [us-central1-f default]
 EOF
 }
@@ -70,7 +71,7 @@ NETWORK="default"
 DISK_SIZE=40
 DISK_TYPE="pd-standard"   # SSD is "pd-ssd"
 
-while getopts ":a:b:c:de:f:hilm:M:n:o:p:qr:R:s:u:wz:N:" opt;do
+while getopts ":a:b:c:de:f:hilm:M:n:o:p:qr:R:s:u:U:wz:N:" opt;do
     case $opt in
     a)
         AGENT_CONTAINER="${OPTARG}"
@@ -152,6 +153,9 @@ while getopts ":a:b:c:de:f:hilm:M:n:o:p:qr:R:s:u:wz:N:" opt;do
         ;;
     u)
         DOCKER_URL="${OPTARG}"
+        ;;
+    U)
+        DOCKER_VERSION="${OPTARG}"
         ;;
     w)
         echo "-w Deprecated... now default behavior"
@@ -320,6 +324,9 @@ create_file()
 {
     local build_file=${1}
     local docker_run_cmd=${2}
+    if [ ! -z ${DOCKER_VERSION} ]; then
+      DOCKER_URL="https://releases.rancher.com/install-docker/${DOCKER_VERSION}.sh"
+    fi
     cat > ${build_file} << EOF
 #!/bin/bash
 
@@ -393,6 +400,9 @@ generate_build_script() # signature: role container build_file
     build_file=$3
 
     if [ "$(get_user_data_flag)" = "true" ]; then
+        if [ ! -z ${DOCKER_VERSION} ]; then
+          DOCKER_URL="https://releases.rancher.com/install-docker/${DOCKER_VERSION}.sh"
+        fi
         user_data_clusters $(id -un) "$(cat ~/.ssh/id_rsa.pub)" ${build_file} "${container}" "${DOCKER_URL}" "${docker_cmd}" "${docker_opts[@]}"
     else
         docker_run_cmd="docker $(echo ${docker_opts[@]}| sed -e 's/,//g'|sed -e 's/\"//g') ${repos_value} ${container} ${docker_cmd}"
